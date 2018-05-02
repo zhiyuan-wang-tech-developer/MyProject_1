@@ -1,0 +1,62 @@
+build/default/debug/main.o:  \
+main.c  \
+mcc_generated_files/mcc.h  \
+ mcc_generated_files/pin_manager.h  \
+mcc_generated_files/adc1.h  \
+ mcc_generated_files/uart1.h  \
+mcc_generated_files/spi2.h  \
+ mcc_generated_files/spi1.h  \
+mcc_generated_files/tmr1.h  \
+ mcc_generated_files/interrupt_manager.h  \
+mcc_generated_files/tmr2.h  \
+ nxp_reader_config_files/phApp_Init.h  \
+NxpNfcRdLib/types/ph_Status.h  \
+ NxpNfcRdLib/types/ph_NxpBuild.h  \
+ NxpNfcRdLib/types/ph_NxpBuild_PIC32MX_PN5180.h  \
+ NxpNfcRdLib/types/ph_TypeDefs.h  \
+NxpNfcRdLib/intfs/phPlatform.h  \
+ NxpNfcRdLib/intfs/phbalReg.h  \
+NxpNfcRdLib/intfs/phOsal.h  \
+ NxpNfcRdLib/intfs/../comps/phOsal/src/NullOs/phOsal_NullOs.h  \
+ NxpNfcRdLib/intfs/../comps/phbalReg/src/Pic32mxSPI/phbalReg_Pic32mxSpi.h  \
+ NxpNfcRdLib/intfs/phhalHw.h  \
+ NxpNfcRdLib/intfs/../comps/phhalHw/src/Pn5180/phhalHw_Pn5180.h  \
+ NxpNfcRdLib/intfs/phKeyStore.h  \
+ NxpNfcRdLib/intfs/../comps/phKeyStore/src/Sw/phKeyStore_Sw.h  \
+ NxpNfcRdLib/intfs/phPlatform_Port_PIC32MX_PN5180.h  \
+ NxpNfcRdLib/intfs/phPlatform_Port_Host.h  \
+ NxpNfcRdLib/intfs/phPlatform_Port_PIC32MX.h  \
+ NxpNfcRdLib/intfs/phpalI14443p3a.h  \
+ NxpNfcRdLib/intfs/../comps/phpalI14443p3a/src/Sw/phpalI14443p3a_Sw.h  \
+ NxpNfcRdLib/intfs/phpalI14443p3b.h  \
+NxpNfcRdLib/intfs/phpalI14443p4a.h  \
+ NxpNfcRdLib/intfs/../comps/phpalI14443p4a/src/Sw/phpalI14443p4a_Sw.h  \
+ NxpNfcRdLib/intfs/phpalI14443p4.h  \
+ NxpNfcRdLib/intfs/../comps/phpalI14443p4/src/Sw/phpalI14443p4_Sw.h  \
+ NxpNfcRdLib/intfs/phpalMifare.h  \
+ NxpNfcRdLib/intfs/../comps/phpalMifare/src/Sw/phpalMifare_Sw.h  \
+ NxpNfcRdLib/intfs/phpalFelica.h  \
+NxpNfcRdLib/intfs/phpalSli15693.h  \
+ NxpNfcRdLib/intfs/phpalI18000p3m3.h  \
+NxpNfcRdLib/intfs/phpalEpcUid.h  \
+ NxpNfcRdLib/intfs/phpalI18092mPI.h  \
+NxpNfcRdLib/intfs/phpalI14443p4mC.h  \
+ NxpNfcRdLib/intfs/phpalI18092mT.h  \
+NxpNfcRdLib/intfs/phacDiscLoop.h  \
+ NxpNfcRdLib/intfs/../comps/phacDiscLoop/src/Sw/phacDiscLoop_Sw.h  \
+ NxpNfcRdLib/intfs/phalFelica.h  \
+NxpNfcRdLib/intfs/phalMfc.h  \
+ NxpNfcRdLib/intfs/../comps/phalMfc/src/Sw/phalMfc_Sw.h  \
+ NxpNfcRdLib/intfs/phalMful.h  \
+NxpNfcRdLib/intfs/phalMfdf.h  \
+ NxpNfcRdLib/types/ph_RefDefs.h  \
+ NxpNfcRdLib/intfs/../comps/phalMfdf/src/Sw/phalMfdf_Sw.h  \
+ NxpNfcRdLib/intfs/phalT1T.h  \
+NxpNfcRdLib/intfs/phalTop.h  \
+ NxpNfcRdLib/intfs/phalI15693.h  \
+NxpNfcRdLib/intfs/phalSli.h  \
+ NxpNfcRdLib/intfs/phalI18000p3m3.h  \
+NxpNfcRdLib/intfs/phceT4T.h  \
+ NxpNfcRdLib/intfs/phlnLlcp.h  \
+NxpNfcRdLib/intfs/phTools.h  \
+ NxpNfcRdLib/intfs/phnpSnep.h 

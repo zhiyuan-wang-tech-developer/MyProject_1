@@ -19,10 +19,10 @@ NxpNfcRdLib/intfs/phOsal.h  \
  NxpNfcRdLib/comps/phbalReg/src/Pic32mxSPI/phbalReg_Pic32mxSpi.h  \
  NxpNfcRdLib/intfs/../../mcc_generated_files/mcc.h  \
  NxpNfcRdLib/intfs/../../mcc_generated_files/pin_manager.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/spi2.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/interrupt_manager.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/spi1.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/uart1.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/tmr2.h  \
  NxpNfcRdLib/intfs/../../mcc_generated_files/adc1.h  \
- NxpNfcRdLib/intfs/../../mcc_generated_files/tmr1.h 
+ NxpNfcRdLib/intfs/../../mcc_generated_files/uart1.h  \
+ NxpNfcRdLib/intfs/../../mcc_generated_files/spi2.h  \
+ NxpNfcRdLib/intfs/../../mcc_generated_files/spi1.h  \
+ NxpNfcRdLib/intfs/../../mcc_generated_files/tmr1.h  \
+ NxpNfcRdLib/intfs/../../mcc_generated_files/interrupt_manager.h  \
+ NxpNfcRdLib/intfs/../../mcc_generated_files/tmr2.h 

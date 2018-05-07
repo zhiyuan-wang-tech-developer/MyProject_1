@@ -13,16 +13,14 @@
 #define	TDA8029_H
 
 #include "../mcc_generated_files/mcc.h"
-//#include "HardwareProfile.h"
-//#include <peripheral/uart.h>
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "fifo.h"
+//#include "fifo.h"
 
 //------------------------------------------------------------------------------
 // Definitions
-#define UART_BAUDRATE    38400
+//#define UART_BAUDRATE    38400
 
 //------------------------------------------------------------------------------
 // PIN Definition
@@ -38,12 +36,12 @@
 void tda8029_Init();
 void tda8029_Sleep();
 void tda8029_WakeUp();
-
+bool tda8029_isCardPresent();
 bool tda8029_putByte( uint8_t byte );
-bool tda8029_putBytes( uint8_t *buf, uint8_t len );
+bool tda8029_putBytes( uint8_t *buf, uint8_t bufLen );
 bool tda8029_getByte( uint8_t *pbyte );
-bool tda8029_getBytes( uint8_t *buf, uint8_t *len );
-void tda8029_getResponse( uint8_t *buf, uint8_t *len );
+bool tda8029_getBytes( uint8_t *buf, uint8_t *bufLen );
+void tda8029_getResponse( uint8_t *buf, uint8_t *bufLen );
 
 //------------------------------------------------------------------------------
 // Variables

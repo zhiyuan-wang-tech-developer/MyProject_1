@@ -10,18 +10,21 @@
  */
 
 #include "tda8029.h"
+#include "ph_TypeDefs.h"
 //#include "clock.h"
 
-bool tda8029_getByte( uint8_t *pbyte );
+// Flush RX Buffer
+__inline void FlushRxBuffer(void);
 
-static uint8_t  tx_buf[40];
-static fifo     tx = {.buf = tx_buf, .size = 40, .r = 0, .w = 0};
+//static uint8_t  tx_buf[40];
+//static fifo     tx = {.buf = tx_buf, .size = 40, .r = 0, .w = 0};
 
-static uint8_t  rx_buf[64];
-static fifo     rx = {.buf = rx_buf, .size = 64, .r = 0, .w = 0};
+//static uint8_t  rx_buf[64];
+//static fifo     rx = {.buf = rx_buf, .size = 64, .r = 0, .w = 0};
 
 //------------------------------------------------------------------------------
-void tda8029_getResponse( uint8_t *buf, uint8_t *len ){
+void tda8029_getResponse( uint8_t *buf, uint8_t *bufLen )
+{
     uint8_t x, idx;
 
     //wait for ACK/NACK
@@ -38,25 +41,29 @@ void tda8029_getResponse( uint8_t *buf, uint8_t *len ){
         //data + LRC
         while( !tda8029_getByte(&buf[idx]) ) ;
     }
-    *len = idx;
+    *bufLen = idx;
 }
 
 //------------------------------------------------------------------------------
 // Initialize the SAM reader chip
-void tda8029_Init(){
-    uint8_t x;
-    uint16_t delay;
+void tda8029_Init()
+{
+    uint8_t buf[30] = {0};
+    uint8_t bufLen = 0;
 
-    //Hold SAM reader in reset
-    SIM_RESET   = 1;
-
-    //Release shutdown mode
-    N_SIM_SHDN  = 1;
+    //Disable Energy Saving Mode
+    SIM_ESM_SetLow();
     
-    //Disable energy saving mode
-    SIM_ESM     = 0;
+    //Hold SAM reader in Reset
+    SIM_RESET_SetHigh();
 
-    UART1_Initialize();
+    // Wait for 10 ms to become stable after RESET
+    Wait(10);
+    
+    //Release shutdown mode
+    SIM_SHDN_N_SetHigh();
+
+//    UART1_Initialize();
     
     //Reset registers
 //    IEC1bits.U1EIE   = 0;
@@ -71,8 +78,8 @@ void tda8029_Init(){
 //    U1STA   = 0;
 //    U1BRG   = 0;
 
-    U1STAbits.UTXISEL   = 0b01;   //10: TXBUF empty; 01: all characters transmitted; 00: TXBUF not full
-    U1STAbits.URXISEL   = 0b00;   //11: RXBUF full; 10: RXBUF 3/4 full; 0x: character received
+//    U1STAbits.UTXISEL   = 0b01;   //10: TXBUF empty; 01: all characters transmitted; 00: TXBUF not full
+//    U1STAbits.URXISEL   = 0b00;   //11: RXBUF full; 10: RXBUF 3/4 full; 0x: character received
 //    U1STAbits.UTXEN     = 1;
 //    U1STAbits.URXEN     = 1;
 
@@ -86,109 +93,112 @@ void tda8029_Init(){
 //    U1BRG = F_PB / ( (U1MODEbits.BRGH ? 1 : 4) * 4 * UART_BAUDRATE ) - 1;
 
     //Clear interrupt flags
-    IFS1bits.U1RXIF = 0;
+//    IFS1bits.U1RXIF = 0;
     
     //Enable interrupts
-    IPC8bits.U1IP    = 4;   //set interrupt priority
+//    IPC8bits.U1IP    = 4;   //set interrupt priority
 //    IEC1bits.U1RXIE  = 1;
 
     //Enable UART
 //    U1MODEbits.ON   = 1;
 
-    //Flush RX
+    //Flush RX Buffer
 //    while( DataRdyUART1() )
-//        x = getcUART1();
-    while( UART1_TRANSFER_STATUS_RX_DATA_PRESENT & UART1_TransferStatusGet() )
-    {
-        x = UART1_Read();
-    }
-
-    uint8_t buf[30] = {0};
-    uint8_t len;
+//        dummy = getcUART1();
+    FlushRxBuffer();
     
-    //release from reset
-    SIM_RESET = 0;
+    //release from Reset
+    SIM_RESET_SetLow();
 
     //Wait for SAM reader to come online
 //    delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100) ;
     /* Wait for 100 ms */
     Wait(100);
-
-    //Request software ID
     
+    //Flush RX Buffer
+    FlushRxBuffer();
+    
+    //Request Status       
+    tda8029_putByte(0x60);  //ACK
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0xAA);  //Code: get_reader_status 
+    tda8029_putByte(0xCA);  //LRC
+    
+    tda8029_getResponse(buf, &bufLen);
+    
+    //Request Software ID    
 //    putcUART1( 0x60 );
 //    putcUART1( 0x00 );
 //    putcUART1( 0x00 );
 //    putcUART1( 0x0A );
 //    putcUART1( 0x6A );
+    tda8029_putByte(0x60);  //ACK
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x0A);  //Code: send_num_mask
+    tda8029_putByte(0x6A);  //LRC
     
-    UART1_Write(0x60);
-    UART1_Write(0x00);
-    UART1_Write(0x00);
-    UART1_Write(0x0A);
-    UART1_Write(0x6A);
-    
-    Nop();
-    Nop();
-    tda8029_getResponse(buf, &len);
-    Nop();
+    tda8029_getResponse(buf, &bufLen);
     
 //    delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100) ;
     Wait(100);
 
     //Initiate 5V
-    memset(buf, 0, 30);
-    
-//    putcUART1( 0x60 );
-//    putcUART1( 0x00 );
-//    putcUART1( 0x01 );
-//    putcUART1( 0x6E );
-//    putcUART1( 0x00 );
-//    putcUART1( 0x0F );
-    
-    UART1_Write(0x60);
-    UART1_Write(0x00);
-    UART1_Write(0x01);
-    UART1_Write(0x6E);
-    UART1_Write(0x00);
-    UART1_Write(0x0F);
+    memset(buf, 0, 30);    
+//    putcUART1( 0x60 );    //ACK
+//    putcUART1( 0x00 );    //Length
+//    putcUART1( 0x01 );    //Length
+//    putcUART1( 0x6E );    //Code: power_up_5V 
+//    putcUART1( 0x00 );    //Param: 00h indicates that all the parameters of the ATR of the card compliant with ISO7816-3 will be taken into account.
+//    putcUART1( 0x0F );    //LRC
+    uint8_t setPower5V[5] = {0x60, 0x00, 0x01, 0x6E, 0x00};
+    uint8_t setPower5VLRC = XOR(setPower5V, sizeof(setPower5V));
+    int i;
+    for( i = 0; i < sizeof(setPower5V); i++)
+    {
+        tda8029_putByte(setPower5V[i]);
+    }
+    tda8029_putByte(setPower5VLRC);   
 
-//    delay = timer_ms.timer;
-//    while( timer_ms.timer - delay < 100) ;
-    Wait(100);  
-    
-    //expecting back: Error: {E0, 00, 01, 6E, C0, LRC} or ATR: {60, 00, 0D, 6E, ATR, LRC}
-    tda8029_getResponse(buf, &len);
-
+    //Expecting back: Error {E0, 00, 01, 6E, C0, LRC} or ATR {60, 00, 0D, 6E, ATR, LRC}
+    tda8029_getResponse(buf, &bufLen);
     Nop();
+    /* Check card presence */
+    tda8029_isCardPresent();
     Nop();
 }
 
 //------------------------------------------------------------------------------
 // Put the SAM reader chip to sleep
-void tda8029_Sleep(){
+void tda8029_Sleep()
+{
     //Disable UART
     U1MODEbits.ON   = 0;
 
-    //Disable interrupts
+    //Disable RX Interrupt
     IEC1bits.U1RXIE  = 0;
     
-    //Clear interrupt flags
+    //Clear RX Interrupt Flag
     IFS1bits.U1RXIF = 0;
     
     //Disable chip
-    SIM_RESET  = 1;
-    N_SIM_SHDN = 0;
+    SIM_RESET_SetHigh();
+    SIM_SHDN_N_SetLow();
 }//tda8029_Sleep()
 
 //------------------------------------------------------------------------------
 // Wake up the SAM reader chip
-void tda8029_WakeUp(){
+void tda8029_WakeUp()
+{
+    uint8_t buf[30] = {0};
+    uint8_t bufLen = 0;
+    
     //Enable chip
-    N_SIM_SHDN = 1;
-    SIM_RESET  = 0;
+    SIM_SHDN_N_SetHigh();
+    SIM_RESET_SetLow();
 
 //    uint16_t delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100 );
@@ -204,12 +214,9 @@ void tda8029_WakeUp(){
     U1MODEbits.ON   = 1;
 
 //    putcUART1(0xAA);    //wake up SAM reader
-    uint8_t len;
-    uint8_t buf[30];
 
-//    tda8029_getResponse(buf, &len);
-   
-    Nop();
+//    tda8029_getResponse(buf, &bufLen);
+
     //Initiate 5V
 //    putcUART1( 0x60 );
 //    putcUART1( 0x00 );
@@ -218,19 +225,28 @@ void tda8029_WakeUp(){
 //    putcUART1( 0x00 );
 //    putcUART1( 0x0F );
     
-    UART1_Write(0x60);
-    UART1_Write(0x00);
-    UART1_Write(0x01);
-    UART1_Write(0x6E);
-    UART1_Write(0x00);
-    UART1_Write(0x0F);    
-    
-    Nop();
+    tda8029_putByte(0x60);
+    tda8029_putByte(0x00);
+    tda8029_putByte(0x01);
+    tda8029_putByte(0x6E);
+    tda8029_putByte(0x00);
+    tda8029_putByte(0x0F);    
 
-    //expecting back: Error: {51, E0, 00, 01, 6E, C0, LRC} or ATR: {51, 60, 00, 0D, 6E, ATR, LRC}
-    tda8029_getResponse(buf, &len);
+    //expecting back: Error {51, E0, 00, 01, 6E, C0, LRC} or ATR {51, 60, 00, 0D, 6E, ATR, LRC}
+    tda8029_getResponse(buf, &bufLen);
     Nop();
-    Nop();
+}
+
+//------------------------------------------------------------------------------
+// Flush RX Buffer
+__inline void FlushRxBuffer(void)
+{
+    uint8_t dummy;
+    
+    while( !UART1_ReceiveBufferIsEmpty() )
+    {
+        dummy = UART1_Read();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -245,30 +261,60 @@ void tda8029_WakeUp(){
 
 bool tda8029_putByte( uint8_t byte )
 {
-    if( !(UART1_TRANSFER_STATUS_TX_FULL & UART1_TransferStatusGet()) )
+    while( UART1_TRANSFER_STATUS_TX_FULL & UART1_TransferStatusGet() )
     {
-        UART1_Write(byte);
-        return true;
+        continue;
     }
-    else
-    {
-        return false;
-    }
+    UART1_Write(byte);
+    return true;
 }
 
 //------------------------------------------------------------------------------
 // Send multiple bytes to the SAM reader chip
 
-//bool tda8029_putBytes( uint8_t *buf, uint8_t len){
-//    while(len--){
+//bool tda8029_putBytes( uint8_t *buf, uint8_t bufLen){
+//    while(bufLen--){
 //        tda8029_putByte( *buf++ );
 //    }
 //    return true;
 //}
 
-bool tda8029_putBytes( uint8_t *buf, uint8_t len )
-{
-    if ( UART1_WriteBuffer(buf, len) == len ) 
+bool tda8029_putBytes( uint8_t *buf, uint8_t bufLen )
+{ 
+    if( (buf == NULL) || (bufLen == 0) )
+    {
+        /* If the buffer pointer is NULL then return false */
+        /* If the buffer length is zero then return false */
+        return false;
+    }
+    
+    /* Count the number of bytes that have been written */
+    unsigned int  numBytesWritten = 0;
+    UART1_TRANSFER_STATUS status;
+
+    while( numBytesWritten < bufLen )
+    {
+        status = UART1_TransferStatusGet();
+        if( status & UART1_TRANSFER_STATUS_TX_EMPTY )
+        {
+            numBytesWritten += UART1_WriteBuffer(buf + numBytesWritten, bufLen - numBytesWritten);
+            if(numBytesWritten < bufLen)
+            {
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            continue;
+        }
+        // Perhaps do something else... ^o^
+    }
+    
+    if( numBytesWritten == bufLen )
     {
         return true;
     }
@@ -287,7 +333,12 @@ bool tda8029_putBytes( uint8_t *buf, uint8_t len )
 
 bool tda8029_getByte( uint8_t *pbyte )
 {
-    if( UART1_TRANSFER_STATUS_RX_DATA_PRESENT & UART1_TransferStatusGet() )
+    if ( pbyte == NULL )
+    {
+        return false;
+    }
+    
+    if( !UART1_ReceiveBufferIsEmpty() )
     {
         *pbyte = UART1_Read();
         return true;
@@ -301,22 +352,63 @@ bool tda8029_getByte( uint8_t *pbyte )
 //------------------------------------------------------------------------------
 // Receive multiple bytes from the SAM reader chip
 
-//bool tda8029_getBytes( uint8_t *buf, uint8_t *len ){
+//bool tda8029_getBytes( uint8_t *buf, uint8_t *bufLen ){
 //    uint8_t avail = fifo_data(&rx);
-//    uint8_t todo = min( avail, *len );
+//    uint8_t todo = min( avail, *bufLen );
 //    uint8_t read = fifo_getBytes( buf, &rx, todo );
 //
-//    if( read == *len ){
+//    if( read == *bufLen ){
 //        return true;
 //    }
 //
-//    *len = read;
+//    *bufLen = read;
 //    return false;
 //}
 
-bool tda8029_getBytes( uint8_t *buf, uint8_t *len )
+bool tda8029_getBytes( uint8_t *buf, uint8_t *bufLen )
 {
+    if( (buf == NULL) || (bufLen == NULL) || (*bufLen == 0) )
+    {
+        return false;
+    }
     
+    /* Store the number of bytes that are ready to read */
+    unsigned int numBytesToRead = *bufLen;
+    /* Count the number of bytes that have been read */
+    unsigned int numBytesRead = 0;    
+    UART1_TRANSFER_STATUS status;
+    
+    while( numBytesRead < numBytesToRead )
+    {
+        status = UART1_TransferStatusGet();
+        if(status & UART1_TRANSFER_STATUS_RX_FULL)
+        {
+            numBytesRead += UART1_ReadBuffer(buf + numBytesRead, numBytesToRead - numBytesRead);
+            if(numBytesRead < numBytesToRead)
+            {
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            continue;
+        }
+        // Do something else...
+    }
+    
+    *bufLen = numBytesRead;
+    if ( numBytesRead == numBytesToRead )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -332,3 +424,36 @@ bool tda8029_getBytes( uint8_t *buf, uint8_t *len )
 //    }
 //}
 
+/**
+ * Check if there is a SAM card present
+ * @return  true if there is a card present
+ *          false on error or if no card is detected
+ */
+bool tda8029_isCardPresent(void)
+{
+    bool response;
+    
+    uint8_t buf[30] = {0};
+    uint8_t bufLen = 0;
+    
+    //Check card presence
+    tda8029_putByte(0x60);  //ACK
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x09);  //Code: check_card_presence
+    tda8029_putByte(0x69);  //LRC
+    
+    tda8029_getResponse(buf, &bufLen);
+    
+    /* 
+     * expecting back:
+     *  60      = ACK
+     *  00      = L1
+     *  01      = L0
+     *  09      = Code: check_card_presence
+     *  PRESENSE= 00 (no card) or 01 (card)
+     *  LRC
+     */    
+    response = ( (bufLen == 6) && (buf[0] == 0x60) && (buf[4] == 1) );    
+    return response;
+}

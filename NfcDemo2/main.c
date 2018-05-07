@@ -49,12 +49,12 @@
 /*
                          Main application
  */
-int main(void)
-{
+int main(void){
+
     // initialize the device
     SYSTEM_Initialize();
-    
-    sam_getID(PIN);
+    uint8_t samPIN[10] = {0};
+    sam_getID(samPIN);
     
     while (1)
     {

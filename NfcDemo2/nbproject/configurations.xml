@@ -23,6 +23,12 @@
         <itemPath>nxp_reader_config_files/phApp_Init.h</itemPath>
         <itemPath>nxp_reader_config_files/Nfcrdlib_MIFARE.h</itemPath>
       </logicalFolder>
+      <logicalFolder name="sam_reader_files"
+                     displayName="sam_reader_files"
+                     projectFiles="true">
+        <itemPath>sam_reader_files/sam_interface.h</itemPath>
+        <itemPath>sam_reader_files/tda8029.h</itemPath>
+      </logicalFolder>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -8710,6 +8716,12 @@
         <logicalFolder name="types" displayName="types" projectFiles="true">
         </logicalFolder>
       </logicalFolder>
+      <logicalFolder name="sam_reader_files"
+                     displayName="sam_reader_files"
+                     projectFiles="true">
+        <itemPath>sam_reader_files/sam_interface.c</itemPath>
+        <itemPath>sam_reader_files/tda8029.c</itemPath>
+      </logicalFolder>
       <itemPath>main_nfcdemo1.c</itemPath>
       <itemPath>main.c</itemPath>
     </logicalFolder>
@@ -9356,6 +9368,18 @@
         <property key="warningmessagebreakoptions.warningmessages" value="holdstate"/>
       </Simulator>
       <item path="main_nfcdemo1.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
     </conf>
   </confs>

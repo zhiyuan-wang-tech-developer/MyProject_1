@@ -1,0 +1,14 @@
+# 2018-05-07 
+# Zhiyuan Wang
+
+# Exclude prerequisites
+*.d
+
+# Exclude object files
+*.o
+
+# Exclude directories
+build/
+debug/
+dist/
+nbproject/private/

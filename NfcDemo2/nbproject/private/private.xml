@@ -5,14 +5,11 @@
         <group>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/sam_reader_files/tda8029.h</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/mcc_generated_files/uart1.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/mcc_generated_files/mcc.h</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/main.c</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/sam_reader_files/sam_interface.h</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/sam_reader_files/tda8029.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/mcc_generated_files/tmr2.h</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/mcc_generated_files/uart1.h</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/sam_reader_files/sam_interface.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/mcc_generated_files/tmr2.c</file>
         </group>
     </open-files>
 </project-private>

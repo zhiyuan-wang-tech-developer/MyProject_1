@@ -386,7 +386,7 @@ unsigned int UART1_WriteBuffer( const uint8_t *buffer , const unsigned int numby
     Returns the transmitter and receiver transfer status
 
   @Description
-    This returns the transmitter and receiver transfer status.The returned status 
+    This returns the transmitter and receiver transfer status. The returned status 
     may contain a value with more than one of the bits
     specified in the UART1_TRANSFER_STATUS enumeration set.  
     The caller should perform an "AND" with the bit of interest and verify if the

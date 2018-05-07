@@ -8,33 +8,33 @@
  */
 #include "sam_interface.h"
 #include "tda8029.h"
-//#include "clock.h"
+#include <string.h>
 
 //uint8_t PIN[8] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38};    //Test PIN
 uint8_t PIN[8] = {0x5E, 0xDE, 0x34, 0xF5, 0x94, 0xF0, 0x8B, 0x1D};      //Production PIN
 
 static uint8_t buf[40];
 
-static uint8_t tx_buf[40];
+//static uint8_t tx_buf[40];
 
 volatile bool sam_Verified = false;
 
 //------------------------------------------------------------------------------
 // Declaration for private function prototypes
 static bool sam_putByte( uint8_t b );
-static bool sam_putBytes( uint8_t *buf, uint8_t len );
+static bool sam_putBytes( uint8_t *buf, uint8_t bufLen );
 static bool sam_getByte( uint8_t *buf );
-static bool sam_getBytes( uint8_t *buf, uint8_t *len );
-static bool sam_transceive( uint8_t *pbuf, uint8_t *len, uint16_t *res );
+static bool sam_getBytes( uint8_t *buf, uint8_t *bufLen );
+static bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response );
 
 //------------------------------------------------------------------------------
 // Calculate the XOR of all bytes in a buffer
 
-uint8_t XOR( uint8_t *buf, uint8_t len ){
+uint8_t XOR( uint8_t *buf, uint8_t bufLen ){
     uint8_t xor = 0;
     uint8_t idx;
 
-    for( idx = 0; idx < len; idx++ ){
+    for( idx = 0; idx < bufLen; idx++ ){
         xor ^= buf[idx];
     }
     return xor;
@@ -44,20 +44,21 @@ uint8_t XOR( uint8_t *buf, uint8_t len ){
 // Verify the SAM
 
 bool sam_verify( uint8_t *pPIN ){
-    uint8_t    i = 0, j = 0;
-    uint16_t    res;
+    uint8_t i = 0;
+    uint8_t j = 0;
+    uint16_t response = 0;
 
     //ALPAR header
-    buf[i++] = 0x60;
-    buf[i++] = 0x00;
-    buf[i++] = 0x0D;
-    buf[i++] = 0x00;
+    buf[i++] = 0x60;    //ACK
+    buf[i++] = 0x00;    //L1
+    buf[i++] = 0x0D;    //L0
+    buf[i++] = 0x00;    //code 00 = command for SAM card
     //APDU header
     buf[i++] = 0x00;  //CLA
-    buf[i++] = 0x20;  //INS
+    buf[i++] = 0x20;  //INS = verified code
     buf[i++] = 0x00;  //P1
-    buf[i++] = 0x02;  //P2
-    buf[i++] = 0x08;  //P3  = PIN length
+    buf[i++] = 0x02;  //P2 = PIN ID
+    buf[i++] = 0x08;  //P3 = PIN Length
     //APDU data
     for( j = 0; j < 8; j++ )
         buf[i++] = pPIN[j];
@@ -67,13 +68,13 @@ bool sam_verify( uint8_t *pPIN ){
     Nop();
     
     //Send the message
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
     //Check response
-    if( res != 0x9000 ){
+    if( response != 0x9000 ){
         //Error
         //0x6283    = Current DF is blocked; EF1 is blocked
         //0x63Cn    = Verify failed, n tries remaining
@@ -97,7 +98,7 @@ bool sam_verify( uint8_t *pPIN ){
 
 bool sam_getID( uint8_t *pSAM_ID_Output ){
     uint8_t    i = 0, j = 0;
-    uint16_t   res;
+    uint16_t   response;
     uint8_t rx_buf[40] = {0};
 
     //ALPAR header
@@ -118,7 +119,7 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
     for( j = 0; j < i; j++ )
     {
 //        putcUART1(buf[j]);
-        UART1_Write(buf[j]);
+        tda8029_putByte(buf[j]);
     }
 
     j = 0;
@@ -130,13 +131,13 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
     Nop();
 
     //Send the message
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
     //Check response
-    if( res != 0x9000 ){
+    if( response != 0x9000 ){
         //Error
         //0x6700    = Incorrect P3 (PIN length), must be <= 32
         //0x6A80    = Incorrect P1 or P2, data not available
@@ -159,7 +160,7 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
 
 bool sam_diversify( uint8_t *pSN ){
     uint8_t    i = 0, j = 0;
-    uint16_t   res;
+    uint16_t   response;
 
     //ALPAR header
     buf[i++] = 0x60;
@@ -180,13 +181,13 @@ bool sam_diversify( uint8_t *pSN ){
 
     Nop();
     //Send the message
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
     //Check response
-    if( res != 0x9000 ){
+    if( response != 0x9000 ){
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Wrong P1, P1 must be 1 - 6
@@ -210,7 +211,7 @@ bool sam_diversify( uint8_t *pSN ){
 
 bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
     uint8_t    i = 0, j = 0;
-    uint16_t   res;
+    uint16_t   response;
 
     //ALPAR header
     buf[i++] = 0x60;
@@ -231,12 +232,12 @@ bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
 
     Nop();
 
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
-    if( res != 0x6110 ){
+    if( response != 0x6110 ){
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Invalid P1 or P2
@@ -255,7 +256,7 @@ bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
 
 bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
     uint8_t    i = 0, j = 0;
-    uint16_t   res = 0;
+    uint16_t   response = 0;
 
     //ALPAR header
     buf[i++] = 0x60;
@@ -273,12 +274,12 @@ bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
 
     Nop();
 
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
-    if( res != 0x9000 ){
+    if( response != 0x9000 ){
         //Error
         //0x6A86    = Invalid P1 or P2
         //0x6700    = Invalid P3, P3 must be 8
@@ -302,7 +303,7 @@ bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
 
 bool sam_verifyAuthentication( uint8_t *pNfcResponseInput ){
     uint8_t    i = 0, j = 0;
-    uint16_t   res;
+    uint16_t   response;
 
     //ALPAR header
     buf[i++] = 0x60;
@@ -324,13 +325,13 @@ bool sam_verifyAuthentication( uint8_t *pNfcResponseInput ){
     Nop();
 
     //Send the message
-    if( !sam_transceive(buf, &i, &res) ){
+    if( !sam_transceive(buf, &i, &response) ){
         //Error
         return false;
     }
 
     //Check response
-    if( res != 0x9000 ){
+    if( response != 0x9000 ){
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Invalid P1 or P2
@@ -352,10 +353,10 @@ bool sam_putByte( uint8_t b ){
 }//sam_putByte()
 
 //------------------------------------------------------------------------------
-// Send len bytes to the SAM card
+// Send bufLen bytes to the SAM card
 
-bool sam_putBytes( uint8_t *buf, uint8_t len ){
-    return tda8029_putBytes(buf, len);
+bool sam_putBytes( uint8_t *buf, uint8_t bufLen ){
+    return tda8029_putBytes(buf, bufLen);
 }//sam_putBytes()
 
 //------------------------------------------------------------------------------
@@ -366,18 +367,18 @@ bool sam_getByte( uint8_t *buf ){
 }//sam_getByte()
 
 //------------------------------------------------------------------------------
-// Receive a response from the SAM reader chip into buf, store received response length in len
+// Receive a response from the SAM reader chip into buf, store received response length in bufLen
 
-bool sam_getBytes( uint8_t *buf, uint8_t *len ){
-    return tda8029_getBytes(buf, len);
+bool sam_getBytes( uint8_t *buf, uint8_t *bufLen ){
+    return tda8029_getBytes(buf, bufLen);
 }//sam_getBytes()
 
 //------------------------------------------------------------------------------
-// Send len bytes to the SAM reader chip and obtain a response
+// Send bufLen bytes to the SAM reader chip and obtain a response
 
-bool sam_transceive( uint8_t *pbuf, uint8_t *len, uint16_t *res ){
+bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response ){
      //Send the message
-    if( !sam_putBytes(pbuf, *len) ){
+    if( !sam_putBytes(pbuf, *bufLen) ){
         //Error
         return false;
     }
@@ -390,24 +391,25 @@ bool sam_transceive( uint8_t *pbuf, uint8_t *len, uint16_t *res ){
 
     memset(buf, 0, 40);
     //Receive response
-    tda8029_getResponse(buf, len);
+    tda8029_getResponse(buf, bufLen);
 
     if( buf[0] == 0xE0 ){
         //error
         Nop();
         Nop();
+        return false;
     }
 
     //Check CRC
-    if( buf[*len-1] != XOR(buf, *len-1) ){
+    if( buf[*bufLen-1] != XOR(buf, *bufLen-1) ){
         return false;
     }
     
     //Store the response code
-    *res = (buf[*len-3] << 8) + buf[*len-2];
+    *response = (buf[*bufLen-3] << 8) + buf[*bufLen-2];
 
-    *len -= 5;  //ALPAR header and LRC are not part of the data the user is interested in
-    memcpy(pbuf, &buf[4], *len);
+    *bufLen -= 5;  //ALPAR header and LRC are not part of the data the user is interested in
+    memcpy(pbuf, &buf[4], *bufLen);
 
     return true;
 }

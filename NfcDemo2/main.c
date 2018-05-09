@@ -43,8 +43,12 @@
     TERMS.
 */
 
+//#define DEBUG_SAM
+#define DEBUG_PN5180
+
 #include "mcc_generated_files/mcc.h"
 #include "sam_reader_files/sam_interface.h"
+#include "pn5180_files/pn5180.h"
 
 /*
                          Main application
@@ -53,14 +57,26 @@ int main(void){
 
     // initialize the device
     SYSTEM_Initialize();
-    uint8_t samPIN[10] = {0};
-    sam_getID(samPIN);
-    
-    while (1)
-    {
-        // Add your application code
-    }
 
+#ifdef DEBUG_SAM    
+    sam_test();
+#endif
+
+#ifdef DEBUG_PN5180
+    if (nfc_init() == true)
+    {
+        detectCard(DETECT_CONTINUOUS);
+    }
+    else
+    {
+        breakpoint();
+    }
+#endif
+    
+//    while (1)
+//    {
+        // Add your application code
+//    }
     return -1;
 }
 /**

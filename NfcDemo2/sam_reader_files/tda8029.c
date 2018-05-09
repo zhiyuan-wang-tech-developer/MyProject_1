@@ -10,7 +10,6 @@
  */
 
 #include "tda8029.h"
-#include "ph_TypeDefs.h"
 //#include "clock.h"
 
 // Flush RX Buffer
@@ -23,25 +22,36 @@ __inline void FlushRxBuffer(void);
 //static fifo     rx = {.buf = rx_buf, .size = 64, .r = 0, .w = 0};
 
 //------------------------------------------------------------------------------
-void tda8029_getResponse( uint8_t *buf, uint8_t *bufLen )
+bool tda8029_getResponse( uint8_t *buf, uint8_t *bufLen )
 {
     uint8_t x, idx;
-
+    
+    //LRC check
+    uint8_t check = 0;
+    
     //wait for ACK/NACK
     do{
         while( !tda8029_getByte(&buf[0]) );
     }while( buf[0] != 0x60 && buf[0] != 0xE0 );
+
+    check = buf[0];
     
     for( idx = 1; idx < 4; idx++ ){
         //header: {ACK/NACK, LEN, LEN, CODE}
         while( !tda8029_getByte(&buf[idx] ) );
+        check ^= buf[idx];
     }
     //technically buf[1:2] are length, but assuming everything is less than 255 bytes
     for( x = 0; x < buf[2]+1; x++, idx++ ){
         //data + LRC
         while( !tda8029_getByte(&buf[idx]) ) ;
+        check ^= buf[idx];
     }
+    
     *bufLen = idx;
+    
+    //check LRC    
+    return (check == 0);    
 }
 
 //------------------------------------------------------------------------------
@@ -58,7 +68,7 @@ void tda8029_Init()
     SIM_RESET_SetHigh();
 
     // Wait for 10 ms to become stable after RESET
-    Wait(10);
+    Wait(50);
     
     //Release shutdown mode
     SIM_SHDN_N_SetHigh();
@@ -119,27 +129,20 @@ void tda8029_Init()
     //Flush RX Buffer
     FlushRxBuffer();
     
-    //Request Status       
+    //Request Status
     tda8029_putByte(0x60);  //ACK
     tda8029_putByte(0x00);  //Length
     tda8029_putByte(0x00);  //Length
     tda8029_putByte(0xAA);  //Code: get_reader_status 
     tda8029_putByte(0xCA);  //LRC
+    tda8029_getResponse(buf, &bufLen); // get stuck here
     
-    tda8029_getResponse(buf, &bufLen);
-    
-    //Request Software ID    
-//    putcUART1( 0x60 );
-//    putcUART1( 0x00 );
-//    putcUART1( 0x00 );
-//    putcUART1( 0x0A );
-//    putcUART1( 0x6A );
+    //Request Software ID
     tda8029_putByte(0x60);  //ACK
     tda8029_putByte(0x00);  //Length
     tda8029_putByte(0x00);  //Length
     tda8029_putByte(0x0A);  //Code: send_num_mask
-    tda8029_putByte(0x6A);  //LRC
-    
+    tda8029_putByte(0x6A);  //LRC 
     tda8029_getResponse(buf, &bufLen);
     
 //    delay = timer_ms.timer;
@@ -375,30 +378,16 @@ bool tda8029_getBytes( uint8_t *buf, uint8_t *bufLen )
     /* Store the number of bytes that are ready to read */
     unsigned int numBytesToRead = *bufLen;
     /* Count the number of bytes that have been read */
-    unsigned int numBytesRead = 0;    
-    UART1_TRANSFER_STATUS status;
+    unsigned int numBytesRead = 0;
     
-    while( numBytesRead < numBytesToRead )
+    do
     {
-        status = UART1_TransferStatusGet();
-        if(status & UART1_TRANSFER_STATUS_RX_FULL)
+        if( !UART1_ReceiveBufferIsEmpty() )
         {
-            numBytesRead += UART1_ReadBuffer(buf + numBytesRead, numBytesToRead - numBytesRead);
-            if(numBytesRead < numBytesToRead)
-            {
-                continue;
-            }
-            else
-            {
-                break;
-            }
+            buf[numBytesRead++] = UART1_Read();
         }
-        else
-        {
-            continue;
-        }
-        // Do something else...
     }
+    while( numBytesRead < numBytesToRead );
     
     *bufLen = numBytesRead;
     if ( numBytesRead == numBytesToRead )

@@ -41,6 +41,7 @@ bool sam_diversify( uint8_t *pSN );
 bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput );
 bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput );
 bool sam_verifyAuthentication( uint8_t *pNfcResponseInput );
+void sam_test();
 
 uint8_t XOR( uint8_t *buf, uint8_t len );
 

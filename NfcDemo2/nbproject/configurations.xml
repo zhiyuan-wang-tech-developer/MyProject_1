@@ -23,6 +23,11 @@
         <itemPath>nxp_reader_config_files/phApp_Init.h</itemPath>
         <itemPath>nxp_reader_config_files/Nfcrdlib_MIFARE.h</itemPath>
       </logicalFolder>
+      <logicalFolder name="pn5180_files"
+                     displayName="pn5180_files"
+                     projectFiles="true">
+        <itemPath>pn5180_files/pn5180.h</itemPath>
+      </logicalFolder>
       <logicalFolder name="sam_reader_files"
                      displayName="sam_reader_files"
                      projectFiles="true">
@@ -8716,6 +8721,11 @@
         <logicalFolder name="types" displayName="types" projectFiles="true">
         </logicalFolder>
       </logicalFolder>
+      <logicalFolder name="pn5180_files"
+                     displayName="pn5180_files"
+                     projectFiles="true">
+        <itemPath>pn5180_files/pn5180.c</itemPath>
+      </logicalFolder>
       <logicalFolder name="sam_reader_files"
                      displayName="sam_reader_files"
                      projectFiles="true">
@@ -8782,7 +8792,7 @@
         <property key="enable-unroll-loops" value="false"/>
         <property key="exclude-floating-point" value="false"/>
         <property key="extra-include-directories"
-                  value="C:\Program Files (x86)\Microchip\xc32\v2.05\pic32mx\include;NxpNfcRdLib\intfs;NxpNfcRdLib\types;NxpNfcRdLib"/>
+                  value="C:\Program Files (x86)\Microchip\xc32\v2.05\pic32mx\include;NxpNfcRdLib\intfs;NxpNfcRdLib\types;NxpNfcRdLib;pn5180_files"/>
         <property key="generate-16-bit-code" value="false"/>
         <property key="generate-micro-compressed-code" value="false"/>
         <property key="isolate-each-function" value="true"/>
@@ -8940,7 +8950,6 @@
         <property key="UART2" value="true"/>
         <property key="USB" value="true"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
-        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="false"/>

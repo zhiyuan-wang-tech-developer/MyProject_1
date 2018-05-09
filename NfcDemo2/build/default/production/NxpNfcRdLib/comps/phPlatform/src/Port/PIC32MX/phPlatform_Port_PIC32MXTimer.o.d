@@ -18,10 +18,10 @@ NxpNfcRdLib/intfs/phOsal.h  \
  NxpNfcRdLib/intfs/phPlatform_Port_PIC32MX.h  \
  NxpNfcRdLib/../mcc_generated_files/mcc.h  \
  NxpNfcRdLib/../mcc_generated_files/pin_manager.h  \
- NxpNfcRdLib/../mcc_generated_files/tmr1.h  \
- NxpNfcRdLib/../mcc_generated_files/uart1.h  \
- NxpNfcRdLib/../mcc_generated_files/adc1.h  \
  NxpNfcRdLib/../mcc_generated_files/tmr2.h  \
+ NxpNfcRdLib/../mcc_generated_files/tmr1.h  \
+ NxpNfcRdLib/../mcc_generated_files/interrupt_manager.h  \
  NxpNfcRdLib/../mcc_generated_files/spi2.h  \
  NxpNfcRdLib/../mcc_generated_files/spi1.h  \
- NxpNfcRdLib/../mcc_generated_files/interrupt_manager.h 
+ NxpNfcRdLib/../mcc_generated_files/uart1.h  \
+ NxpNfcRdLib/../mcc_generated_files/adc1.h 

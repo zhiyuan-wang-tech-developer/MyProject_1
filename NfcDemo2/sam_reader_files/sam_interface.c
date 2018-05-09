@@ -30,11 +30,13 @@ static bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response )
 //------------------------------------------------------------------------------
 // Calculate the XOR of all bytes in a buffer
 
-uint8_t XOR( uint8_t *buf, uint8_t bufLen ){
+uint8_t XOR( uint8_t *buf, uint8_t bufLen )
+{
     uint8_t xor = 0;
     uint8_t idx;
 
-    for( idx = 0; idx < bufLen; idx++ ){
+    for( idx = 0; idx < bufLen; idx++ )
+    {
         xor ^= buf[idx];
     }
     return xor;
@@ -43,7 +45,8 @@ uint8_t XOR( uint8_t *buf, uint8_t bufLen ){
 //------------------------------------------------------------------------------
 // Verify the SAM
 
-bool sam_verify( uint8_t *pPIN ){
+bool sam_verify( uint8_t *pPIN )
+{
     uint8_t i = 0;
     uint8_t j = 0;
     uint16_t response = 0;
@@ -68,13 +71,15 @@ bool sam_verify( uint8_t *pPIN ){
     Nop();
     
     //Send the message
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
     //Check response
-    if( response != 0x9000 ){
+    if( response != 0x9000 )
+    {
         //Error
         //0x6283    = Current DF is blocked; EF1 is blocked
         //0x63Cn    = Verify failed, n tries remaining
@@ -96,7 +101,8 @@ bool sam_verify( uint8_t *pPIN ){
 //------------------------------------------------------------------------------
 // Obtain ID of current SAM card
 
-bool sam_getID( uint8_t *pSAM_ID_Output ){
+bool sam_getID( uint8_t *pSAM_ID_Output )
+{
     uint8_t    i = 0, j = 0;
     uint16_t   response;
     uint8_t rx_buf[40] = {0};
@@ -131,13 +137,15 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
     Nop();
 
     //Send the message
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
     //Check response
-    if( response != 0x9000 ){
+    if( response != 0x9000 )
+    {
         //Error
         //0x6700    = Incorrect P3 (PIN length), must be <= 32
         //0x6A80    = Incorrect P1 or P2, data not available
@@ -145,7 +153,8 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
     }
 
     //Check receive length, expecting 6-byte ID + 2 byte response
-    if( i != 8 ){
+    if( i != 8 )
+    {
         return false;
     }
 
@@ -158,7 +167,8 @@ bool sam_getID( uint8_t *pSAM_ID_Output ){
 //------------------------------------------------------------------------------
 // Diversify the SAM key based on a specified 8-byte Serial Number
 
-bool sam_diversify( uint8_t *pSN ){
+bool sam_diversify( uint8_t *pSN )
+{
     uint8_t    i = 0, j = 0;
     uint16_t   response;
 
@@ -181,13 +191,15 @@ bool sam_diversify( uint8_t *pSN ){
 
     Nop();
     //Send the message
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
     //Check response
-    if( response != 0x9000 ){
+    if( response != 0x9000 )
+    {
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Wrong P1, P1 must be 1 - 6
@@ -209,7 +221,8 @@ bool sam_diversify( uint8_t *pSN ){
 //------------------------------------------------------------------------------
 // Prepare for Authentication with 8-byte NFC challenge
 
-bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
+bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput )
+{
     uint8_t    i = 0, j = 0;
     uint16_t   response;
 
@@ -232,12 +245,14 @@ bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
 
     Nop();
 
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
-    if( response != 0x6110 ){
+    if( response != 0x6110 )
+    {
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Invalid P1 or P2
@@ -254,7 +269,8 @@ bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput ){
 //------------------------------------------------------------------------------
 // Obtain the response from Prepare Authentication, store the 16-byte SAM response
 
-bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
+bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput )
+{
     uint8_t    i = 0, j = 0;
     uint16_t   response = 0;
 
@@ -274,12 +290,14 @@ bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
 
     Nop();
 
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
-    if( response != 0x9000 ){
+    if( response != 0x9000 )
+    {
         //Error
         //0x6A86    = Invalid P1 or P2
         //0x6700    = Invalid P3, P3 must be 8
@@ -288,7 +306,8 @@ bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
     }
 
     //Check receive length, expecting 16-byte SAM Response + 2 byte response
-    if( i != 18 ){
+    if( i != 18 )
+    {
         return false;
     }
 
@@ -301,7 +320,8 @@ bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput ){
 //------------------------------------------------------------------------------
 // Verify the 8-byte NFC response
 
-bool sam_verifyAuthentication( uint8_t *pNfcResponseInput ){
+bool sam_verifyAuthentication( uint8_t *pNfcResponseInput )
+{
     uint8_t    i = 0, j = 0;
     uint16_t   response;
 
@@ -325,13 +345,15 @@ bool sam_verifyAuthentication( uint8_t *pNfcResponseInput ){
     Nop();
 
     //Send the message
-    if( !sam_transceive(buf, &i, &response) ){
+    if( !sam_transceive(buf, &i, &response) )
+    {
         //Error
         return false;
     }
 
     //Check response
-    if( response != 0x9000 ){
+    if( response != 0x9000 )
+    {
         //Error
         //0x6986    = No DF selected
         //0x6A86    = Invalid P1 or P2
@@ -348,35 +370,40 @@ bool sam_verifyAuthentication( uint8_t *pNfcResponseInput ){
 //------------------------------------------------------------------------------
 // Send a byte to the SAM reader chip
 
-bool sam_putByte( uint8_t b ){
+bool sam_putByte( uint8_t b )
+{
     return tda8029_putByte(b);
 }//sam_putByte()
 
 //------------------------------------------------------------------------------
 // Send bufLen bytes to the SAM card
 
-bool sam_putBytes( uint8_t *buf, uint8_t bufLen ){
+bool sam_putBytes( uint8_t *buf, uint8_t bufLen )
+{
     return tda8029_putBytes(buf, bufLen);
 }//sam_putBytes()
 
 //------------------------------------------------------------------------------
 // Receive a byte from the SAM reader chip into buf
 
-bool sam_getByte( uint8_t *buf ){
+bool sam_getByte( uint8_t *buf )
+{
     return tda8029_getByte(buf);
 }//sam_getByte()
 
 //------------------------------------------------------------------------------
 // Receive a response from the SAM reader chip into buf, store received response length in bufLen
 
-bool sam_getBytes( uint8_t *buf, uint8_t *bufLen ){
+bool sam_getBytes( uint8_t *buf, uint8_t *bufLen )
+{
     return tda8029_getBytes(buf, bufLen);
 }//sam_getBytes()
 
 //------------------------------------------------------------------------------
 // Send bufLen bytes to the SAM reader chip and obtain a response
 
-bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response ){
+bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response )
+{
      //Send the message
     if( !sam_putBytes(pbuf, *bufLen) ){
         //Error
@@ -393,7 +420,8 @@ bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response ){
     //Receive response
     tda8029_getResponse(buf, bufLen);
 
-    if( buf[0] == 0xE0 ){
+    if( buf[0] == 0xE0 )
+    {
         //error
         Nop();
         Nop();
@@ -401,7 +429,8 @@ bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response ){
     }
 
     //Check CRC
-    if( buf[*bufLen-1] != XOR(buf, *bufLen-1) ){
+    if( buf[*bufLen-1] != XOR(buf, *bufLen-1) )
+    {
         return false;
     }
     
@@ -417,13 +446,37 @@ bool sam_transceive( uint8_t *pbuf, uint8_t *bufLen, uint16_t *response ){
 //------------------------------------------------------------------------------
 // Put the SAM reader to sleep
 
-void sam_Sleep(){
+void sam_Sleep()
+{
     tda8029_Sleep();
 }//sam_Sleep()
 
 //------------------------------------------------------------------------------
 // Wake up the SAM reader
 
-void sam_WakeUp(){
+void sam_WakeUp()
+{
     tda8029_WakeUp();
 }//sam_WakeUp()
+
+//------------------------------------------------------------------------------
+// Test the SAM card reader
+void sam_test(void)
+{
+    uint8_t sam_ID[6] = {0};   
+    UART1_Initialize();
+    IEC1bits.U1RXIE = 0;
+    IEC1bits.U1TXIE = 0;  
+    tda8029_Init();
+    sam_WakeUp();
+ 
+    if( !sam_verify(PIN) )
+    {
+//        __builtin_software_breakpoint();
+    }
+    
+    if( !sam_getID(sam_ID) )
+    {
+//        __builtin_software_breakpoint();
+    }
+}

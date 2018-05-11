@@ -267,7 +267,7 @@ bool sam_prepareAuthentication( uint8_t *pNfcChallengeInput )
 }//sam_prepareAuthentication()
 
 //------------------------------------------------------------------------------
-// Obtain the response from Prepare Authentication, store the 16-byte SAM response
+// Obtain the SAM response from Prepare Authentication, store the 16-byte SAM response
 
 bool sam_getResponseAuthentication( uint8_t *pSamResponseOutput )
 {
@@ -465,8 +465,8 @@ void sam_test(void)
 {
     uint8_t sam_ID[6] = {0};   
     UART1_Initialize();
-    IEC1bits.U1RXIE = 0;
-    IEC1bits.U1TXIE = 0;  
+//    IEC1bits.U1RXIE = 1;
+//    IEC1bits.U1TXIE = 1;  
     tda8029_Init();
     sam_WakeUp();
  

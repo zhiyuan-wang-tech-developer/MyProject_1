@@ -43,7 +43,7 @@ extern "C" {
 #define SUCCESS     true
 
 bool nfc_init(void);
-void detectCard(bool detectMode);
+void detectCard(bool detectLoopMode);
 bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDataOut);
 bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut);
 bool MifareDesfire_SAM_authentication(void);

@@ -135,7 +135,7 @@ void tda8029_Init()
     tda8029_putByte(0x00);  //Length
     tda8029_putByte(0xAA);  //Code: get_reader_status 
     tda8029_putByte(0xCA);  //LRC
-    tda8029_getResponse(buf, &bufLen); // get stuck here
+    tda8029_getResponse(buf, &bufLen);
     
     //Request Software ID
     tda8029_putByte(0x60);  //ACK
@@ -160,7 +160,7 @@ void tda8029_Init()
     uint8_t setPower5V[5] = {0x60, 0x00, 0x01, 0x6E, 0x00};
     uint8_t setPower5VLRC = XOR(setPower5V, sizeof(setPower5V));
     int i;
-    for( i = 0; i < sizeof(setPower5V); i++)
+    for( i = 0; i < sizeof(setPower5V); i++ )
     {
         tda8029_putByte(setPower5V[i]);
     }

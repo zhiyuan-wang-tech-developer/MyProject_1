@@ -7,6 +7,9 @@
 # Exclude object files
 *.o
 
+*.xml
+*.mk
+
 # Exclude directories
 build/
 debug/

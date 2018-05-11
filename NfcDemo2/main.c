@@ -49,6 +49,7 @@
 #include "mcc_generated_files/mcc.h"
 #include "sam_reader_files/sam_interface.h"
 #include "pn5180_files/pn5180.h"
+#include "sam_reader_files/tda8029.h"
 
 /*
                          Main application
@@ -63,6 +64,7 @@ int main(void){
 #endif
 
 #ifdef DEBUG_PN5180
+    tda8029_Init();
     if (nfc_init() == true)
     {
         detectCard(DETECT_CONTINUOUS);

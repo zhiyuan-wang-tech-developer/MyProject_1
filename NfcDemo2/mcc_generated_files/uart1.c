@@ -138,13 +138,15 @@ void UART1_Initialize (void)
 {
    // STSEL 1S; IREN disabled; PDSEL 8N; RTSMD disabled; RXINV disabled; SIDL disabled; WAKE disabled; ABAUD disabled; LPBACK disabled; BRGH enabled; UEN TX_RX; ON enabled; 
    U1MODE = 0x8008;
-   // UTXISEL TX_COMPLETE; UTXINV disabled; ADDR 0; URXEN enabled; OERR disabled; ADM_EN disabled; URXISEL RX_ONE_CHAR; UTXBRK disabled; UTXEN enabled; ADDEN disabled; 
-   U1STA = 0x5400;
+   // UTXISEL TX_BUF_EMPTY; UTXINV disabled; ADDR 0; URXEN enabled; OERR disabled; ADM_EN disabled; URXISEL RX_ONE_CHAR; UTXBRK disabled; UTXEN enabled; ADDEN disabled; 
+   U1STA = 0x9400;
    // U1TXREG 0; 
    U1TXREG = 0x0;
-   // BaudRate = 38461.539; Frequency = 8000000 Hz; BRG 51; 
+   // BaudRate = 38400; Frequency = 8000000 Hz; BRG 51; 
    U1BRG = 0x33;
 
+   // Both UART1 TX and RX interrupts must be enabled!
+   IEC1bits.U1TXIE = 1; 
    IEC1bits.U1RXIE = 1;
 
    U1STAbits.UTXEN = 1;

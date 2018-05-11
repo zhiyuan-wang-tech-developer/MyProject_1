@@ -26,6 +26,7 @@
 #include "pn5180.h"
 #include "../mcc_generated_files/mcc.h"
 #include "../nxp_reader_config_files/phApp_Init.h"
+#include "../sam_reader_files/sam_interface.h"
 
 /* TODO:  Include other files here if needed. */
 
@@ -38,6 +39,24 @@
 #define MIFARE_CLASSIC_4K_SAK   0x18
 #define MIFARE_DESFIRE_SAK  0x20
 
+typedef uint8_t key_t[6];
+
+typedef union {
+    uint8_t fileData[18];
+    struct __attribute__((packed))
+    {
+        uint8_t ISO_prefix[6];
+        uint8_t TypeA_prefix[2];
+        uint8_t uniqueNum[9];
+        uint8_t checkDigit;
+    };
+} cardNumType;
+
+typedef enum {
+    cardUnknown,
+    cardMifareDesfire,
+    cardMifareClassic
+} cardType;
 /*******************************************************************************
 **   Global Variable Declaration
 *******************************************************************************/
@@ -47,12 +66,12 @@ static uint8_t bHalBufferTx[128];  /* HAL TX buffer */
 static uint8_t bHalBufferRx[128];  /* HAL RX buffer */
 
 /* The 6-bytes Test Key only for Mifare Classic Card Authentication */
-static const uint8_t MifareClassicTestKey[6] = {0x80, 0xAF, 0x30, 0x42, 0x1A, 0x20};
+static uint8_t MifareClassicTestKey[6] = {0x80, 0xAF, 0x30, 0x42, 0x1A, 0x20};
 /* The Block Data read from the Mifare Classic Card is stored here */
 static uint8_t MifareClassicBlockData[16] = {0};
 
 /* The File Data read from the Mifare DESFire Card is stored here */
-static uint8_t MifareDesfireFileData[19] = {0};
+static uint8_t MifareDesfireFileData[18] = {0};
 
 
 bool nfc_init(void)
@@ -97,137 +116,147 @@ bool nfc_init(void)
 }
 
 /* Customize your detection mode: detect only once or detect continously */
-void detectCard(bool detectMode)
+void detectCard(bool detectLoopMode)
 {   
     phStatus_t  status = PH_ERR_SUCCESS;
     uint16_t    wTagsDetected = 0;  /* Stash the tag technologies that were detected during polling mode */
-    uint16_t    wATQA;              /* Stash card ATQA information */
-    uint8_t     bSAK;               /* Stash card SAK information */
-    uint8_t     bUidLength;         /* Indicate the card UID length */
-    uint8_t     aUid[PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH];   /* Stash the card UID (Unique IDentifier) */
+    uint16_t    wATQA = 0;              /* Stash card ATQA information */
+    uint8_t     bSAK = 0;               /* Stash card SAK information */
+    uint8_t     bUidLength = 0;         /* Indicate the card UID length */
+    uint8_t     aUid[PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH] = {0};   /* Stash the card UID (Unique IDentifier) */
+    cardType    detectedCardType = cardUnknown;
     
      /* Start card detection */
     do   
     {
         /* Ready to detect a card */
-        do
-        {
-            LED_SetLow();
-            
-            /* Field OFF */
-            status = phhalHw_FieldOff(pHal);
-            /* Wait for 5100 ms */
-            status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MICROSECONDS, 5100);
-            /* Configure Discovery loop for Polling Detection Mode */
-            status = phacDiscLoop_SetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_NEXT_POLL_STATE, PHAC_DISCLOOP_POLL_STATE_DETECTION);
-            /* Run Discovery loop */
-            status = phacDiscLoop_Run(&sDiscLoop, PHAC_DISCLOOP_ENTRY_POINT_POLL);
-            
-        }while((status & PH_ERR_MASK) != PHAC_DISCLOOP_DEVICE_ACTIVATED); /* Exit when single card/device is activated */
+        /* Turn off LED */
+        LED_SetLow();            
+        /* Switch off the RF Field */
+        status = phhalHw_FieldOff(pHal);
+        /* Wait for 5100 ms */
+        status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MICROSECONDS, 5100);
+        /* Configure Discovery loop for Polling Detection Mode */
+        status = phacDiscLoop_SetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_NEXT_POLL_STATE, PHAC_DISCLOOP_POLL_STATE_DETECTION);
+        /* Run Discovery loop */
+        status = phacDiscLoop_Run(&sDiscLoop, PHAC_DISCLOOP_ENTRY_POINT_POLL);
+        /* Check for the status code 
+         * Enter when single card/device is activated
+         */    
+        if((status & PH_ERR_MASK) == PHAC_DISCLOOP_DEVICE_ACTIVATED ) 
+        {    
+            /* Go here when a card is detected */
 
-        /* Go here when a card is detected */
-        
-        /* Get the detected tech type info */
-        status = phacDiscLoop_GetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_TECH_DETECTED, &wTagsDetected);
-        /* Check if the detected tech type is acquired from the discovery loop with success */
-        if((status & PH_ERR_MASK) == PH_ERR_SUCCESS)
-        {
-            /* Check for ISO/IEC 14443 Type A tech detection */
-            if(PHAC_DISCLOOP_CHECK_ANDMASK(wTagsDetected, PHAC_DISCLOOP_POS_BIT_MASK_A))
+            /* Get the detected tech type info */
+            status = phacDiscLoop_GetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_TECH_DETECTED, &wTagsDetected);
+            /* Check if the detected tech type is acquired from the discovery loop with success */
+            if((status & PH_ERR_MASK) == PH_ERR_SUCCESS)
             {
-                /* Turn on the LED to indicate that a Type A card has been detected */
-                LED_SetHigh();
-
-                /* Read and store ATQA from Type A card */
-                wATQA = (uint16_t) sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[0];
-                wATQA |= sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[1] << 8;
-                /* Read and store SAK from Type A card */
-                bSAK = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aSak;
-                /* Read and store UID length */
-                bUidLength = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].bUidSize;
-                /* Read and store UID */
-                memcpy(aUid, sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aUid, bUidLength);
-                
-                /* Check for MIFARE Classic 1K Card */
-                if( (wATQA == MIFARE_CLASSIC_1K_ATQA) && (bSAK == MIFARE_CLASSIC_1K_SAK) )                        
+                /* Check for ISO/IEC 14443 Type A tech detection */
+                if(PHAC_DISCLOOP_CHECK_ANDMASK(wTagsDetected, PHAC_DISCLOOP_POS_BIT_MASK_A))
                 {
-                    /* Card Type: MIFARE Classic 1K Card */
+                    /* Turn on the LED to indicate that a Type A card has been detected */
+                    LED_SetHigh();
 
-                    /* Read card info here */
-                    if(MifareClassic_AuthenticateCard_ReadBlock(MifareClassicTestKey, MifareClassicBlockData) == FAILURE)
+                    /* Read and store ATQA from Type A card */
+                    wATQA = (uint16_t) sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[0];
+                    wATQA |= sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[1] << 8;
+                    /* Read and store SAK from Type A card */
+                    bSAK = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aSak;
+                    /* Read and store UID length */
+                    bUidLength = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].bUidSize;
+                    /* Read and store UID */
+                    memcpy(aUid, sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aUid, bUidLength);
+
+                    /* Check for MIFARE Classic 1K Card */
+                    if( (wATQA == MIFARE_CLASSIC_1K_ATQA) && (bSAK == MIFARE_CLASSIC_1K_SAK) )                        
                     {
-                        /* Mifare Classic Card Authentication Failure */
-                        breakpoint();
+                        /* Card Type: MIFARE Classic 1K Card */
+                        detectedCardType = cardMifareClassic;
+                        /* Read card info here */
+                        if(MifareClassic_AuthenticateCard_ReadBlock(MifareClassicTestKey, MifareClassicBlockData) == FAILURE)
+                        {
+                            /* Mifare Classic Card Authentication Failure */
+                            breakpoint();
+                        }
+                        else
+                        {
+                            /* Mifare Classic Card Authentication Success */
+                            breakpoint();
+                        }
                     }
-                    else
+                    /* Check for MIFARE Classic 4K Card */
+                    if( (wATQA == MIFARE_CLASSIC_4K_ATQA) && (bSAK == MIFARE_CLASSIC_4K_SAK) )                        
                     {
-                        /* Mifare Classic Card Authentication Success */
+                        /* Card Type: MIFARE Classic 4K Card */
+                        detectedCardType = cardMifareClassic;
                         breakpoint();
+                        /* Read card info here */
+
                     }
+                    /* Check for MIFARE DESFire Card */
+                    if( (wATQA == MIFARE_DESFIRE_ATQA) && (bSAK == MIFARE_DESFIRE_SAK) )                        
+                    {
+                        /* Card Type: MIFARE DESFire Card */
+                        detectedCardType = cardMifareDesfire;
+                        /* Read card info here */
+                        if( MifareDesfire_AuthenticateCard_ReadFile(MifareDesfireFileData) == FAILURE )
+                        {
+                            /* Mifare DESFire Card Authentication Failure */
+                            breakpoint();
+                        }
+                        else
+                        {
+                            /* Mifare DESFire Card Authentication Success */
+                            breakpoint();
+                        }
+
+                    }                
+
+                    /* RF Field RESET */
+                    status = phhalHw_FieldReset(pHal);
+                    /* Wait for Type-A card removal */
+                    /* Make sure that the routine is not detecting the same Type-A card continuously */
+                    do
+                    {
+                        /* Perform a ISO14443-3A Wakeup command */
+        //                    status = phpalI14443p3a_WakeUpA(sDiscLoop.pPal1443p3aDataParams,
+        //                                                    sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa);
+                        /* Perform a ISO14443-3A Request command */
+                        status = phpalI14443p3a_RequestA(sDiscLoop.pPal1443p3aDataParams,
+                                                         sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa);
+                        /* Check for Status */
+                        if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
+                        {
+                            /* Turn off the LED to indicate that the ISO/IEC 14443 Type A card has been removed */
+                            LED_SetLow();
+                            /* Clear the detected card information */
+                            wTagsDetected = 0;
+                            wATQA = 0;
+                            bSAK = 0;
+                            bUidLength = 0;
+                            memset(aUid, '\0', PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH);
+                            memset(MifareClassicBlockData, '\0', sizeof(MifareClassicBlockData));
+                            memset(MifareDesfireFileData, '\0', sizeof(MifareDesfireFileData));
+                            detectedCardType = cardUnknown;
+                            /* Card is removed and break from the internal do-while loop */
+                            break;
+                        }
+                        /* Perform a ISO14443-3A Halt command */
+                        status = phpalI14443p3a_HaltA(sDiscLoop.pPal1443p3aDataParams);
+                        /* Delay - 5 milliseconds*/
+                        status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MILLISECONDS, 5);
+                    }while(1);                   
                 }
-                /* Check for MIFARE Classic 4K Card */
-                if( (wATQA == MIFARE_CLASSIC_4K_ATQA) && (bSAK == MIFARE_CLASSIC_4K_SAK) )                        
-                {
-                    /* Card Type: MIFARE Classic 4K Card */
-                    breakpoint();
-                    /* Read card info here */
-                    
-                }
-                /* Check for MIFARE DESFire Card */
-                if( (wATQA == MIFARE_DESFIRE_ATQA) && (bSAK == MIFARE_DESFIRE_SAK) )                        
-                {
-                    /* Card Type: MIFARE DESFire Card */
-
-                    /* Read card info here */
-                    if( MifareDesfire_AuthenticateCard_ReadFile(MifareDesfireFileData) == FAILURE )
-                    {
-                        /* Mifare DESFire Card Authentication Failure */
-                        breakpoint();
-                    }
-                    else
-                    {
-                        /* Mifare DESFire Card Authentication Success */
-                        breakpoint();
-                    }
-                    
-                }                
-                    
-                /* RF Field RESET */
-                status = phhalHw_FieldReset(pHal);
-                /* Wait for Type-A card removal */
-                /* Make sure that the routine is not detecting the same Type-A card continuously */
-                do
-                {
-                    /* Perform a ISO14443-3A Wakeup command */
-//                    status = phpalI14443p3a_WakeUpA(sDiscLoop.pPal1443p3aDataParams,
-//                                                    sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa);
-                    /* Perform a ISO14443-3A Request command */
-                    status = phpalI14443p3a_RequestA(sDiscLoop.pPal1443p3aDataParams,
-                                                     sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa);
-                    /* Check for Status */
-                    if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
-                    {
-                        /* Turn off the LED to indicate that the ISO/IEC 14443 Type A card has been removed */
-                        LED_SetLow();
-                        /* Clear the detected card information */
-                        wTagsDetected = 0;
-                        wATQA = 0;
-                        bSAK = 0;
-                        bUidLength = 0;
-                        memset(aUid, '\0', PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH);
-                        memset(MifareClassicBlockData, '\0', sizeof(MifareClassicBlockData));
-                        /* Card is removed and break from the internal do-while loop */
-                        break;
-                    }
-                    /* Perform a ISO14443-3A Halt command */
-                    status = phpalI14443p3a_HaltA(sDiscLoop.pPal1443p3aDataParams);
-                    /* Delay - 5 milliseconds*/
-                    status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MILLISECONDS, 5);
-                       
-                }while(1);                   
+                detectedCardType = cardUnknown;
             }
         }
-    }while(detectMode);
+        else
+        {
+            /* No card/device is activated */
+            continue;
+        }
+    }while(detectLoopMode);
 }
 
 bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDataOut)
@@ -296,13 +325,19 @@ bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDa
 
 bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut)
 {
+    if( (pFileDataOut == NULL) )
+    {
+        breakpoint();
+        return false;
+    }
+        
     /* Stash the temporary status code */
     phStatus_t status = PH_ERR_SUCCESS;
     
     /* Pointer to the Abstraction Layer (AL) MIFARE DESFire component */
     phalMfdf_Sw_DataParams_t *palMfdf = &salMFDF;
     /* Pointer to the PAL ISO 14443-4 component */
-    phpalI14443p4_Sw_DataParams_t* ppalI14443p4 = &spalI14443p4;
+    phpalI14443p4_Sw_DataParams_t *ppalI14443p4 = &spalI14443p4;
     
     /* ISO 14443-4 Protocol Configuration Parameters */
     uint8_t bCidEnable = 0;
@@ -361,10 +396,11 @@ bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut)
         breakpoint();
         return false;
     }
+    
     /* Step #4: Select Application */
     /* It holds Application IDentifier (AID) and LSB is the first */
     uint8_t AID[3] = {0xFFU, 0xFFU, 0xFFU};
-    /* Select one particular application with the AID on the Mifare DESFire card for further access */
+    /* Select one particular application with the AID on the MIFARE DESFire card for further access */
     status = phalMfdf_SelectApplication(palMfdf, AID);
     /* Check for the status code */
     if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
@@ -389,113 +425,165 @@ bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut)
         breakpoint();
         return false;
     }
-    /* Copy the MIFARE DESFire Card File Data to the File Data Buffer */
-    memcpy(pFileDataOut, pRxBuffer, wRxLength);
-//    strcpy(cardInfo.cardType, pMfdfTypeName);
-//    memcpy(cardInfo.cardNum, &bDataBuffer[7], 12);
+    /* 19 bytes should be received
+     * The first byte pRxBuffer[0] = 0 so it can be skipped      
+     */
+    if( wRxLength == 19 )
+    {
+        /* Copy the 18-bytes MIFARE DESFire Card File Data to the File Data Buffer */
+        memcpy(pFileDataOut, &pRxBuffer[1], 18);
+    }
+    else
+    {
+        /* The number of received bytes is not 19 */
+        breakpoint();
+        return false;
+    }
+
     return true;    
 }
 
 bool MifareDesfire_SAM_authentication(void)
 {
-        uint8_t* pRxBuffer = NULL;
-    uint16_t RxLength = 0;
-
+    /* Store the temporary status code */
     phStatus_t status = PH_ERR_SUCCESS;
-    phalMfdf_Sw_DataParams_t* palMfdf = &salMFDF; //phNfcLib_GetDataParams( PH_COMP_AL_MFDF );
-    phpalI14443p4_Sw_DataParams_t* ppalI14443p4 = &spalI14443p4;   //phNfcLib_GetDataParams(PH_COMP_PAL_ISO14443P4);
-
+    /* Pointer to the Rx Buffer */
+    /* If the pointer is NULL the NFC reader library internal Rx buffer is used */ 
+    uint8_t *pRxBuffer = NULL;
+    /* Rx Buffer Length */
+    uint16_t wRxLength = 0;
     
-    bool res = true;
-    bool res2 = false;
+    /* Pointer to the Abstraction Layer (AL) MIFARE DESFire component */
+    phalMfdf_Sw_DataParams_t *palMfdf = &salMFDF;
+    /* Pointer to the PAL ISO 14443-4 component */
+    phpalI14443p4_Sw_DataParams_t *ppalI14443p4 = &spalI14443p4;
+  
+    /* It holds the 8-bytes NFC challenge code from the MIFARE DESFire card */
+    uint8_t nfcChallenge[8] = {0};
+    /* It holds the 16-bytes SAM response code from the SAM card */
+    uint8_t samResponse[16] = {0};
+    /* It holds the 8-bytes NFC response code from the MIFARE DESFire card */
+    uint8_t nfcResponse[8] = {0};
+   
+    /* Attempt MIFARE DESFire authentication with SAM card */
     
-    
-    uint8_t nfc_Challenge[8] = {0};    
-    uint8_t sam_Challenge[16] = {0};
-    uint8_t nfc_Response[8] = {0};
-    
-    
-    //Attempt authentication
-    
-    //Select TaT application
-    uint8_t pAppId2[3] = {0x30, 0x88, 0xF8};
-    status = phalMfdf_SelectApplication(palMfdf, pAppId2);
-    CHECK_STATUS(status);        
-    if( status){
-        res = false;
+    /* Step #1: Select Touch a Tag (TaT) application */
+    /* It holds the Touch a Tag (TaT) Application IDentifier */
+    uint8_t TaTAID[3] = {0x30, 0x88, 0xF8};
+    /* Select one particular application with the TaTAID on the MIFARE DESFire card for further access */
+    status = phalMfdf_SelectApplication(palMfdf, TaTAID);
+    /* Check for the status code */       
+    if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
+    {
+        /* Card Application Selection with TaTAID failed */
         breakpoint();
+        return false;
     }
-    
-    //generate session key
-    if( res ){
-        uint8_t SN[8];
-        memcpy( SN, pDataParams->sTypeATargetInfo.aTypeA_I3P3[0].aUid, 7);
-        SN[7] = SN[0];
 
-        res2 = sam_diversify(SN);
-        if( !res2 ){
-            res = false;
-            breakpoint();
-        }
+    /* Step #2: Get 8-bytes NFC challenge code from the MIFARE DESFire card */
+    /* It holds the command to get the NFC challenge code */
+    uint8_t nfcGetChallengeCmd[2] = {0x1A, 0x01};
+    /* If the pointer is NULL the NFC reader library internal Rx buffer is used */    
+    pRxBuffer = NULL;
+    /* Perform ISO 14443-4 Data Exchange with MIFARE DESFire Card */ 
+    status = phpalI14443p4_Exchange(ppalI14443p4, PH_EXCHANGE_DEFAULT, nfcGetChallengeCmd, 2, &pRxBuffer, &wRxLength);
+    /* Check for the status code */
+    if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
+    {
+        /* Fail to get the 8-bytes NFC challenge code from the MIFARE DESFire card */
+        breakpoint();
+        return false;
+    }
+    else
+    {
+        /* Success in getting NFC challenge code from the MIFARE DESFire card */
+        /* Copy the acquired NFC challenge code */
+        /* pRxBuffer[0] == 0 so it can be skipped and we copy from pRxBuffer[1] */
+        memcpy(nfcChallenge, &pRxBuffer[1], 8);
     }
     
-    if( res ){
-        //Get challenge from NFC    
-        uint8_t nfcGetChall[] = {0x1A, 0x01};
+    /* Step #3: Generate the session key */
+    /* It holds the 8-bytes Serial Number */
+    uint8_t SN[8] = {0};
+    /* Convert the 7-bytes UID to the 8-bytes Serial Number */
+    memcpy(SN, sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aUid, 7);
+    SN[7] = SN[0];
+    /* Verify the SAM card with the PIN */
+    if( sam_verify(PIN) == FAILURE )
+    {
+        /* The SAM card verification failed */
+        /* You may provide the incorrect PIN */
+        breakpoint();
+        return false;
+    }
+    /* Diversify the SAM Key based on a specified 8-bytes Serial Number */
+    if( sam_diversify(SN) == FAILURE )
+    {
+        /* Diversifying the SAM Key failed */
+        breakpoint();
+        return false;
+    }
+    
+    /* Step #4: Prepare the SAM card for authentication on 8-bytes NFC challenge code
+     * After forwarding the NFC challenge code to the SAM card and 
+     * succeeding in preparing the SAM card for authentication 
+     * then get SAM response code for the NFC challenge code
+     */ 
+    if( sam_prepareAuthentication(nfcChallenge) == FAILURE )
+    {
+        /* Fail to prepare the SAM card for authentication on 8-bytes NFC challenge code */
+        breakpoint();
+        return false;
+    }
+    
+    /* Step #5: Get the 16-bytes SAM response code from the SAM card 
+     * after successful SAM authentication preparation in step 4
+     */  
+    if( sam_getResponseAuthentication(samResponse) == FAILURE )
+    {
+        /* Fail to get the 16-bytes SAM response code from the SAM card */
+        breakpoint();
+        return false;        
+    }
 
-        pRxBuffer = NULL;
-        status = phpalI14443p4_Exchange(ppalI14443p4, PH_EXCHANGE_DEFAULT, nfcGetChall, 2, &pRxBuffer, &RxLength);
-        CHECK_STATUS(status);
-        if(status){
-            res = false;
-            breakpoint();
-        }else{
-            memcpy( nfc_Challenge, &pRxBuffer[1], 8);
-        }
+    /* Step #6: Get the 8-bytes NFC response code from the MIFARE DESFire card */
+    /* It holds the command to get the NFC response code 
+     * nfcGetResponseCmd[0] = 0xAF is the Get-NFC-Response-Command
+     * nfcGetResponseCmd[1...17] hold the 16-bytes SAM response code
+     */   
+    uint8_t nfcGetResponseCmd[17] = {0xAF};
+    memcpy(&nfcGetResponseCmd[1], samResponse, 16);
+    /* If the pointer is NULL the NFC reader library internal Rx buffer is used */
+    pRxBuffer = NULL;
+    /* Perform ISO 14443-4 Data Exchange with MIFARE DESFire Card
+     * Forward the 16-bytes SAM response code to NFC reader (MIFARE DESFire Card)
+     * Then get the 8-bytes NFC response code from the MIFARE DESFire Card
+     */
+    status = phpalI14443p4_Exchange(ppalI14443p4, PH_EXCHANGE_DEFAULT, nfcGetResponseCmd, 17, &pRxBuffer, &wRxLength);
+    /* Check for the status code */
+    if( (status & PH_ERR_MASK) != PH_ERR_SUCCESS )
+    {
+        /* Fail to get the 8-bytes NFC response code from the MIFARE DESFire card */
+        breakpoint();
+        return false;
     }
-    
-    if( res ){
-        //Forward challenge to SAM, get challenge for NFC
-        res2 = sam_prepareAuth(nfc_Challenge);
-        if( !res2 ) {
-            res = false;
-            breakpoint();
-        }
+    else
+    {
+        /* Success in getting the NFC response code from the MIFARE DESFire card */
+        /* Copy the acquired NFC response code */
+        /* pRxBuffer[0] == 0 so it can be skipped and we copy from pRxBuffer[1] */       
+        memcpy(nfcResponse, &pRxBuffer[1], 8);       
     }
-    
-    if( res ){        
-        res2 = sam_getResponseAuth(sam_Challenge);
-        if( !res2 ){
-            res = false;
-            breakpoint();
-        }
-    }
-    
-    if( res ){
-        //Forward challenge to NFC, get response for SAM
-        uint8_t nfcGetRes[17] = {0xAF};
-        memcpy( &nfcGetRes[1], sam_Challenge, 16);
 
-        pRxBuffer = NULL;
-        status = phpalI14443p4_Exchange(ppalI14443p4, PH_EXCHANGE_DEFAULT, nfcGetRes, 17, &pRxBuffer, &RxLength);
-        CHECK_STATUS(status);
-        if( status ){
-            res = false;
-            breakpoint();
-        }else{
-            memcpy( nfc_Response, &pRxBuffer[1], 8);
-        }
+    /* Step #7: Verify the 8-bytes NFC response code with SAM card */
+    if( sam_verifyAuthentication(nfcResponse) == FAILURE )
+    {
+        /* Fail to verify the 8-bytes NFC response code with SAM card */
+        breakpoint();
+        return false;        
     }
     
-    if( res ){                
-        res2 = sam_verifyAuth(nfc_Response);
-        if( !res2 ){
-            res = false;
-        }
-    }
-        
-    breakpoint();
-//    return res;
+    /* Successful authentication on MIFARE DESFire card with the SAM card */
     return true;
 }
 /* *****************************************************************************

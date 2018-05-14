@@ -74,9 +74,14 @@ bool sam_verify( uint8_t *pPIN )
     if( !sam_transceive(buf, &i, &response) )
     {
         //Error
+#ifdef DEBUG_SAM
+        breakpoint();
+#endif
         return false;
     }
-
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     //Check response
     if( response != 0x9000 )
     {
@@ -105,7 +110,7 @@ bool sam_getID( uint8_t *pSAM_ID_Output )
 {
     uint8_t    i = 0, j = 0;
     uint16_t   response;
-    uint8_t rx_buf[40] = {0};
+    uint8_t    rx_buf[40] = {0};
 
     //ALPAR header
     buf[i++] = 0x60;
@@ -131,8 +136,9 @@ bool sam_getID( uint8_t *pSAM_ID_Output )
     j = 0;
 
     tda8029_getResponse(rx_buf, &j);
-
-    Nop();
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     Nop();
     Nop();
 
@@ -140,9 +146,14 @@ bool sam_getID( uint8_t *pSAM_ID_Output )
     if( !sam_transceive(buf, &i, &response) )
     {
         //Error
+#ifdef DEBUG_SAM
+        breakpoint();
+#endif
         return false;
     }
-
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     //Check response
     if( response != 0x9000 )
     {
@@ -466,17 +477,20 @@ void sam_test(void)
     uint8_t sam_ID[6] = {0};   
     UART1_Initialize();
 //    IEC1bits.U1RXIE = 1;
-//    IEC1bits.U1TXIE = 1;  
+//    IEC1bits.U1TXIE = 1;
+    tda8029_Sleep();
+    Wait(10);
     tda8029_Init();
-    sam_WakeUp();
+//    sam_WakeUp();
  
     if( !sam_verify(PIN) )
     {
-//        __builtin_software_breakpoint();
+        breakpoint();
     }
     
     if( !sam_getID(sam_ID) )
     {
-//        __builtin_software_breakpoint();
+       breakpoint();
     }
+    breakpoint();
 }

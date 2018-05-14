@@ -38,13 +38,13 @@ bool tda8029_getResponse( uint8_t *buf, uint8_t *bufLen )
     
     for( idx = 1; idx < 4; idx++ ){
         //header: {ACK/NACK, LEN, LEN, CODE}
-        while( !tda8029_getByte(&buf[idx] ) );
+        while( !tda8029_getByte(&buf[idx]) );
         check ^= buf[idx];
     }
     //technically buf[1:2] are length, but assuming everything is less than 255 bytes
     for( x = 0; x < buf[2]+1; x++, idx++ ){
         //data + LRC
-        while( !tda8029_getByte(&buf[idx]) ) ;
+        while( !tda8029_getByte(&buf[idx]) );
         check ^= buf[idx];
     }
     
@@ -68,7 +68,7 @@ void tda8029_Init()
     SIM_RESET_SetHigh();
 
     // Wait for 10 ms to become stable after RESET
-    Wait(50);
+    Wait(10);
     
     //Release shutdown mode
     SIM_SHDN_N_SetHigh();
@@ -130,13 +130,19 @@ void tda8029_Init()
     FlushRxBuffer();
     
     //Request Status
-    tda8029_putByte(0x60);  //ACK
-    tda8029_putByte(0x00);  //Length
-    tda8029_putByte(0x00);  //Length
-    tda8029_putByte(0xAA);  //Code: get_reader_status 
-    tda8029_putByte(0xCA);  //LRC
-    tda8029_getResponse(buf, &bufLen);
-    
+//    tda8029_putByte(0x60);  //ACK
+//    tda8029_putByte(0x00);  //Length
+//    tda8029_putByte(0x00);  //Length
+//    tda8029_putByte(0xAA);  //Code: get_reader_status 
+//    tda8029_putByte(0xCA);  //LRC
+    /* Request status failed, return error 
+     * Program gets stuck here so comment them
+     */
+//    tda8029_getResponse(buf, &bufLen); 
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
+//    breakpoint();    
     //Request Software ID
     tda8029_putByte(0x60);  //ACK
     tda8029_putByte(0x00);  //Length
@@ -144,13 +150,15 @@ void tda8029_Init()
     tda8029_putByte(0x0A);  //Code: send_num_mask
     tda8029_putByte(0x6A);  //LRC 
     tda8029_getResponse(buf, &bufLen);
-    
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
 //    delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100) ;
     Wait(100);
 
+    memset(buf, 0, 30);  
     //Initiate 5V
-    memset(buf, 0, 30);    
 //    putcUART1( 0x60 );    //ACK
 //    putcUART1( 0x00 );    //Length
 //    putcUART1( 0x01 );    //Length
@@ -168,10 +176,14 @@ void tda8029_Init()
 
     //Expecting back: Error {E0, 00, 01, 6E, C0, LRC} or ATR {60, 00, 0D, 6E, ATR, LRC}
     tda8029_getResponse(buf, &bufLen);
-    Nop();
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     /* Check card presence */
-    tda8029_isCardPresent();
-    Nop();
+    if(tda8029_isCardPresent() == false)
+    {
+        breakpoint();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -234,9 +246,11 @@ void tda8029_WakeUp()
     tda8029_putByte(0x6E);
     tda8029_putByte(0x00);
     tda8029_putByte(0x0F);    
-
     //expecting back: Error {51, E0, 00, 01, 6E, C0, LRC} or ATR {51, 60, 00, 0D, 6E, ATR, LRC}
     tda8029_getResponse(buf, &bufLen);
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     Nop();
 }
 
@@ -420,7 +434,7 @@ bool tda8029_getBytes( uint8_t *buf, uint8_t *bufLen )
  */
 bool tda8029_isCardPresent(void)
 {
-    bool response;
+    bool response = true;
     
     uint8_t buf[30] = {0};
     uint8_t bufLen = 0;
@@ -433,7 +447,9 @@ bool tda8029_isCardPresent(void)
     tda8029_putByte(0x69);  //LRC
     
     tda8029_getResponse(buf, &bufLen);
-    
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
     /* 
      * expecting back:
      *  60      = ACK

@@ -44,26 +44,31 @@
 */
 
 //#define DEBUG_SAM
-#define DEBUG_PN5180
+//#define DEBUG_PN5180
+#define SYSTEM_DEBUG
 
 #include "mcc_generated_files/mcc.h"
 #include "sam_reader_files/sam_interface.h"
 #include "pn5180_files/pn5180.h"
 #include "sam_reader_files/tda8029.h"
+#include "system_files/system.h"
 
 /*
                          Main application
  */
-int main(void){
-
+int main(void)
+{
+//    breakpoint();
     // initialize the device
     SYSTEM_Initialize();
 
-#ifdef DEBUG_SAM    
+#ifdef DEBUG_SAM
+	CNCONAbits.ON = 0;     
     sam_test();
 #endif
 
 #ifdef DEBUG_PN5180
+    CNCONAbits.ON = 0; 
     tda8029_Init();
     if (nfc_init() == true)
     {
@@ -74,11 +79,10 @@ int main(void){
         breakpoint();
     }
 #endif
-    
-//    while (1)
-//    {
-        // Add your application code
-//    }
+        
+#ifdef SYSTEM_DEBUG
+    systemRun();
+#endif 
     return -1;
 }
 /**

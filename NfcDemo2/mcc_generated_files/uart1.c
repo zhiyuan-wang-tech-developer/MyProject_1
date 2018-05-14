@@ -145,8 +145,6 @@ void UART1_Initialize (void)
    // BaudRate = 38400; Frequency = 8000000 Hz; BRG 51; 
    U1BRG = 0x33;
 
-   // Both UART1 TX and RX interrupts must be enabled!
-   IEC1bits.U1TXIE = 1; 
    IEC1bits.U1RXIE = 1;
 
    U1STAbits.UTXEN = 1;

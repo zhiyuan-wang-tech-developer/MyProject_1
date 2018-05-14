@@ -34,6 +34,13 @@
         <itemPath>sam_reader_files/sam_interface.h</itemPath>
         <itemPath>sam_reader_files/tda8029.h</itemPath>
       </logicalFolder>
+      <logicalFolder name="system_files"
+                     displayName="system_files"
+                     projectFiles="true">
+        <itemPath>system_files/system.h</itemPath>
+        <itemPath>system_files/slave_spi.h</itemPath>
+        <itemPath>system_files/slave_spi_fifo.h</itemPath>
+      </logicalFolder>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -8731,6 +8738,13 @@
                      projectFiles="true">
         <itemPath>sam_reader_files/sam_interface.c</itemPath>
         <itemPath>sam_reader_files/tda8029.c</itemPath>
+      </logicalFolder>
+      <logicalFolder name="system_files"
+                     displayName="system_files"
+                     projectFiles="true">
+        <itemPath>system_files/system.c</itemPath>
+        <itemPath>system_files/slave_spi.c</itemPath>
+        <itemPath>system_files/slave_spi_fifo.c</itemPath>
       </logicalFolder>
       <itemPath>main_nfcdemo1.c</itemPath>
       <itemPath>main.c</itemPath>

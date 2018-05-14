@@ -115,9 +115,19 @@ void PIN_MANAGER_Initialize(void)
     SYSTEM_RegLock(); 
 
     /****************************************************************************
+     * Interrupt On Change for group CNCONA - config
+     ***************************************************************************/
+	CNCONAbits.ON = 1; 
+
+    /****************************************************************************
      * Interrupt On Change for group CNCONB - config
      ***************************************************************************/
 	CNCONBbits.ON = 1; 
+
+    /****************************************************************************
+     * Interrupt On Change for group CNENA - any
+     ***************************************************************************/
+	CNENAbits.CNIEA3 = 1; // Pin : RA3
 
     /****************************************************************************
      * Interrupt On Change for group CNENB - any
@@ -150,6 +160,21 @@ void __ISR (_CHANGE_NOTICE_VECTOR, IPL5AUTO) _CHANGE_NOTICE ( void )
 {    
     if(IFS1bits.CNAIF == 1)
     {
+        /* Check the change notice on port A3 */
+        if(CNSTATAbits.CNSTATA3)
+        {
+            if( !KL_SS2_N_GetValue() )
+            {
+                //PIC32MX MCU is selected
+                //Maybe do some special things before resuming with the rest of the wake-up procedure
+//                breakpoint();
+            }
+            else
+            {
+                //PIC32MX MCU is not selected, go to sleep
+                //runMode = runSleep;
+            }
+        }
         // Clear the flag
         IFS1bits.CNAIF = 0;
     }

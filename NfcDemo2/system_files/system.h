@@ -29,6 +29,9 @@
  */
 
 /* TODO:  Include other files here if needed. */
+#include "../mcc_generated_files/mcc.h"
+#include "../pn5180_files/pn5180.h"
+#include "../sam_reader_files/tda8029.h"
 
 //card types
 #define TYPE_NONE           0x00
@@ -41,25 +44,18 @@
 #define TYPE_MIFARE_KEY6    0x40
 #define TYPE_CARD_ID        0x80
 
-#define NFC_REQUEST_IDLE    0x26
-
 typedef uint8_t key_t[6];
 
 typedef union {
-    uint8_t raw[18];
-    struct __attribute__((packed)) {
-        uint8_t iso_prefix[6];
-        uint8_t a_prefix[2];
-        uint8_t unique[9];
-        uint8_t check;
+    uint8_t rawData[18];
+    struct __attribute__((packed))
+    {
+        uint8_t ISO_prefix[6];
+        uint8_t TypeA_prefix[2];
+        uint8_t uniqueNum[9];
+        uint8_t checkDigit;
     };
-} card_num_t;
-
-typedef enum {
-    cardNone,
-    cardDesfire,
-    cardMifare
-} cardType;
+} desfireCardInfoType;
 
 typedef enum {
     runSleep,
@@ -68,14 +64,19 @@ typedef enum {
 } run_t;
 
 volatile run_t runMode = runSleep;
+
 uint8_t requestMask = TYPE_NONE;
 uint8_t typeFound = TYPE_NONE;
+
 bool flagFindCards = false;
 bool flagFindCardsDone = false;
 bool flagCardFound = false;
-cardType atqa_type = cardNone, sak_type = cardNone;
-key_t key[6];
+
+key_t key[6] ={{0}, {0}, {0}, {0}, {0}, {0}};
+
 uint8_t data[20];
+
+desfireCardInfoType desfireCardInfo;
 
 /* Provide C++ Compatibility */
 #ifdef __cplusplus
@@ -86,8 +87,9 @@ void reset(void);
 void goSleep(void);
 void goIdle(void);
 void systemRun(void);
+void nfc_findCards(void);
 
-    /* Provide C++ Compatibility */
+/* Provide C++ Compatibility */
 #ifdef __cplusplus
 }
 #endif

@@ -1370,6 +1370,152 @@
 #define SCK1_SetDigitalOutput() TRISBbits.TRISB14 = 0
 /**
   @Summary
+    Sets the GPIO pin, RB15, high using LATBbits.LATB15.
+
+  @Description
+    Sets the GPIO pin, RB15, high using LATBbits.LATB15.
+
+  @Preconditions
+    The RB15 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Set RB15 high (1)
+    SCK2_SetHigh();
+    </code>
+
+*/
+#define SCK2_SetHigh()          LATBbits.LATB15 = 1
+/**
+  @Summary
+    Sets the GPIO pin, RB15, low using LATBbits.LATB15.
+
+  @Description
+    Sets the GPIO pin, RB15, low using LATBbits.LATB15.
+
+  @Preconditions
+    The RB15 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Set RB15 low (0)
+    SCK2_SetLow();
+    </code>
+
+*/
+#define SCK2_SetLow()           LATBbits.LATB15 = 0
+/**
+  @Summary
+    Toggles the GPIO pin, RB15, using LATBbits.LATB15.
+
+  @Description
+    Toggles the GPIO pin, RB15, using LATBbits.LATB15.
+
+  @Preconditions
+    The RB15 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Toggle RB15
+    SCK2_Toggle();
+    </code>
+
+*/
+#define SCK2_Toggle()           LATBbits.LATB15 ^= 1
+/**
+  @Summary
+    Reads the value of the GPIO pin, RB15.
+
+  @Description
+    Reads the value of the GPIO pin, RB15.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    uint16_t portValue;
+
+    // Read RB15
+    postValue = SCK2_GetValue();
+    </code>
+
+*/
+#define SCK2_GetValue()         PORTBbits.RB15
+/**
+  @Summary
+    Configures the GPIO pin, RB15, as an input.
+
+  @Description
+    Configures the GPIO pin, RB15, as an input.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Sets the RB15 as an input
+    SCK2_SetDigitalInput();
+    </code>
+
+*/
+#define SCK2_SetDigitalInput()  TRISBbits.TRISB15 = 1
+/**
+  @Summary
+    Configures the GPIO pin, RB15, as an output.
+
+  @Description
+    Configures the GPIO pin, RB15, as an output.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Sets the RB15 as an output
+    SCK2_SetDigitalOutput();
+    </code>
+
+*/
+#define SCK2_SetDigitalOutput() TRISBbits.TRISB15 = 0
+/**
+  @Summary
     Sets the GPIO pin, RB2, high using LATBbits.LATB2.
 
   @Description

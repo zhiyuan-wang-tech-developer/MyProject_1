@@ -1,4 +1,5 @@
 #include "slave_spi.h"
+#include "slave_spi_fifo.h"
 //#include "nfc_iface.h"
 //#include "clock.h"
 
@@ -155,7 +156,7 @@ void spi_slaveInit(){
 
     //enable interrupts
     IEC1bits.SPI2RXIE = 1;
-
+    
     //Turn on SPI
     SPI2CONbits.ON  = 1;
 

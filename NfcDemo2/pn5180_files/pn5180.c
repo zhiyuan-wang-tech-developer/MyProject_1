@@ -5,7 +5,7 @@
     Company Name
 
   @File Name
-    filename.c
+    pn5180.c
 
   @Summary
     Brief description of the file.
@@ -39,24 +39,6 @@
 #define MIFARE_CLASSIC_4K_SAK   0x18
 #define MIFARE_DESFIRE_SAK  0x20
 
-typedef uint8_t key_t[6];
-
-typedef union {
-    uint8_t fileData[18];
-    struct __attribute__((packed))
-    {
-        uint8_t ISO_prefix[6];
-        uint8_t TypeA_prefix[2];
-        uint8_t uniqueNum[9];
-        uint8_t checkDigit;
-    };
-} cardNumType;
-
-typedef enum {
-    cardUnknown,
-    cardMifareDesfire,
-    cardMifareClassic
-} cardType;
 /*******************************************************************************
 **   Global Variable Declaration
 *******************************************************************************/
@@ -230,15 +212,6 @@ void detectCard(bool detectLoopMode)
                         {
                             /* Turn off the LED to indicate that the ISO/IEC 14443 Type A card has been removed */
                             LED_SetLow();
-                            /* Clear the detected card information */
-                            wTagsDetected = 0;
-                            wATQA = 0;
-                            bSAK = 0;
-                            bUidLength = 0;
-                            memset(aUid, '\0', PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH);
-                            memset(MifareClassicBlockData, '\0', sizeof(MifareClassicBlockData));
-                            memset(MifareDesfireFileData, '\0', sizeof(MifareDesfireFileData));
-                            detectedCardType = cardUnknown;
                             /* Card is removed and break from the internal do-while loop */
                             break;
                         }
@@ -248,14 +221,46 @@ void detectCard(bool detectLoopMode)
                         status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MILLISECONDS, 5);
                     }while(1);                   
                 }
-                detectedCardType = cardUnknown;
             }
         }
         else
         {
             /* No card/device is activated */
-            continue;
+            /* Skip the rest of the current loop and start next loop */
+//            continue;
         }
+        /* Copy 
+         * 1. card type 
+         * 2. card UID 
+         * 3. card data
+         */
+//        breakpoint();
+        currentCardType = detectedCardType;
+        if( currentCardType == cardMifareClassic )
+        {
+            memcpy(currentCardUID, aUid, sizeof(aUid));
+            memcpy(currentCardData, MifareClassicBlockData, sizeof(MifareClassicBlockData));
+        }
+        else if( currentCardType == cardMifareDesfire )
+        {
+            memcpy(currentCardUID, aUid, sizeof(aUid));
+            memcpy(currentCardData, MifareDesfireFileData, sizeof(MifareDesfireFileData));
+        }
+        else
+        {
+            memset(currentCardUID, 0, sizeof(currentCardUID));            
+            memset(currentCardData, 0, sizeof(currentCardData));
+        }
+
+        /* Clear the detected card information */
+        wTagsDetected = 0;
+        wATQA = 0;
+        bSAK = 0;
+        bUidLength = 0;
+        memset(aUid, '\0', PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH);
+        memset(MifareClassicBlockData, '\0', sizeof(MifareClassicBlockData));
+        memset(MifareDesfireFileData, '\0', sizeof(MifareDesfireFileData));
+        detectedCardType = cardUnknown;
     }while(detectLoopMode);
 }
 
@@ -300,7 +305,10 @@ bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDa
         return false;
     }
     
-    /* Tx Buffer holds commands */
+    /* Tx Buffer holds commands
+     * Read Command: 0x30
+     * Block Address: 0x04
+     */
     uint8_t TxBuffer[2] = {0x30, 0x04};
     /* Tx Buffer Length */
     uint16_t wTxLength = sizeof(TxBuffer);

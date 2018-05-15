@@ -130,10 +130,14 @@ void systemRun(void)
             case runNormal:
             {
                 /* Detect NFC card if required */
-//                findCards();
-                runMode = runSleep;
+                nfc_findCards();
+                // If no card found, go back to sleep
+                if( flagFindCardsDone == true && typeFound == TYPE_NONE )
+                {
+                    runMode = runSleep;
+                }
                 break;
-            }
+            }//case( runNormal )
 
             case runSleep:
             {
@@ -156,7 +160,8 @@ void systemRun(void)
 
             case runWaking:
             {
-                /* Wake up all components */                
+                /* Wake up all components */
+                SYSTEM_Initialize();
                 spi_slaveInit();
                 runMode = runNormal;
                 break;
@@ -168,6 +173,126 @@ void systemRun(void)
     }
 }
 
+//------------------------------------------------------------------------------
+// NFC process
+void nfc_findCards(void) 
+{
+    uint8_t mask = 1;
+
+    //check if we should do something
+    if( flagFindCards == false )
+    {
+        //turn off field
+        return;
+    }
+    else
+    {
+        //reset flags
+        flagFindCardsDone   = false;
+        flagCardFound       = false;
+        typeFound           = TYPE_NONE;
+        //clear global variables
+        currentCardType = cardUnknown;
+        memset(currentCardUID, 0, sizeof(currentCardUID));            
+        memset(currentCardData, 0, sizeof(currentCardData));
+    }
+
+    tda8029_Init();
+    //find a card
+    if( nfc_init() == true )
+    {
+        detectCard(DETECT_ONCE);
+    }
+    else
+    {
+        breakpoint();
+        return;
+    }
+
+    flagFindCards = false;
+    flagFindCardsDone = true;
+
+    //Check if the card is one of the types we want to find.
+    if( currentCardType == cardUnknown )
+    {
+        flagFindCards       = false;
+        flagFindCardsDone   = true;
+        flagCardFound       = false;
+        typeFound           = TYPE_NONE;
+        return;
+    }
+
+    //for each position in the mask (in the last iteration, the value of mask gets shifted out of 8-bit range)
+    for( mask = 1; mask > 0 && !flagCardFound; mask <<= 1 )
+    {
+        if (~requestMask & mask) {
+            //bit not set in request mask, try next one
+            continue;
+        }
+
+        switch (mask)
+        {
+            case TYPE_CARD_ID:
+                if( currentCardType == cardUnknown )
+                {
+                    //TODO: unknown type of card selected, allow or reject?
+                    continue;
+                }
+
+                flagCardFound       = true;
+                typeFound           = mask;
+                memcpy(data, currentCardUID, 7); //save the UID in data to be sent
+                break;
+
+            case TYPE_DESFIRE_SAM:
+                if( currentCardType != cardMifareDesfire )
+                {
+                    //wrong type of card selected                    
+                    continue;
+                }
+
+                //Found a DESFire, read out the unique part of the Card Number
+                //First wake up the SAM reader
+//                tda8029_Init();
+
+                memcpy(desfireCardInfo.rawData, currentCardData, 18);
+
+                //Extract the unique ID part
+                memcpy(data, desfireCardInfo.uniqueNum, 9);
+                memcpy(&data[9], &desfireCardInfo.checkDigit, 1);
+                flagCardFound       = true;
+                typeFound           = mask;
+                break;
+
+            default:
+                //MIFARE CLASSIC TYPES
+                if( currentCardType != cardMifareClassic )
+                {
+                    //wrong type of card selected
+                    continue;
+                }
+                //Found a MIFARE CLASSIC, read data block 4 (sector 1, block 0)
+
+                //Authenticate the MIFARE
+//                if( !nfc_authentMifare(UID, mask) ) continue;
+
+                //read the data
+                memcpy(data, currentCardData, 16);
+                //data[0] = Hi( City code )
+                //data[1] = Lo( City Code )
+                //data[2] = HI( CardNr )
+                //data[3] = MID( CardNr )
+                //data[4] = LO( CardNr )
+                flagCardFound       = true;
+                typeFound           = mask;
+                break;
+        }//switch( mask )
+    }//for( each possible mask )
+
+    //checked everything, either we found something or nothing is there
+    flagFindCards       = false;
+    flagFindCardsDone   = true;
+}
 /* *****************************************************************************
  End of File
  */

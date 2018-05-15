@@ -478,8 +478,6 @@ void sam_test(void)
     UART1_Initialize();
 //    IEC1bits.U1RXIE = 1;
 //    IEC1bits.U1TXIE = 1;
-    tda8029_Sleep();
-    Wait(10);
     tda8029_Init();
 //    sam_WakeUp();
  

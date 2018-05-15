@@ -94,7 +94,7 @@ void PIN_MANAGER_Initialize(void)
      * Setting the Analog/Digital Configuration SFR(s)
      ***************************************************************************/
     ANSELA = 0x0003;
-    ANSELB = 0xC000;
+    ANSELB = 0x4000;
     ANSELC = 0x000F;
 
     /****************************************************************************
@@ -167,6 +167,8 @@ void __ISR (_CHANGE_NOTICE_VECTOR, IPL5AUTO) _CHANGE_NOTICE ( void )
             {
                 //PIC32MX MCU is selected
                 //Maybe do some special things before resuming with the rest of the wake-up procedure
+                KL_INT2_BUSY_N_SetLow();
+
 //                breakpoint();
             }
             else

@@ -123,26 +123,38 @@ void tda8029_Init()
     //Wait for SAM reader to come online
 //    delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100) ;
-    /* Wait for 100 ms */
+    /* Wait for 100 ms
+     * The waiting time must be greater than 100 ms
+     * Otherwise the system will get stuck in tda8029_getResponse()
+     */
     Wait(100);
     
     //Flush RX Buffer
     FlushRxBuffer();
     
-    //Request Status
-//    tda8029_putByte(0x60);  //ACK
-//    tda8029_putByte(0x00);  //Length
-//    tda8029_putByte(0x00);  //Length
-//    tda8029_putByte(0xAA);  //Code: get_reader_status 
-//    tda8029_putByte(0xCA);  //LRC
-    /* Request status failed, return error 
-     * Program gets stuck here so comment them
-     */
-//    tda8029_getResponse(buf, &bufLen); 
 #ifdef DEBUG_SAM
     breakpoint();
 #endif
-//    breakpoint();    
+    /* IMPORTANT:
+     * You must wait here for at least 40 ms after RX buffer is flushed
+     * Otherwise the request status failed and program gets stuck here
+     */
+    Wait(50); // MUST-WAIT-HERE!!!  
+    //Request Status
+    tda8029_putByte(0x60);  //ACK
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0x00);  //Length
+    tda8029_putByte(0xAA);  //Code: get_reader_status 
+    tda8029_putByte(0xCA);  //LRC
+    tda8029_getResponse(buf, &bufLen); 
+#ifdef DEBUG_SAM
+    breakpoint();
+#endif
+    /* IMPORTANT:
+     * You must wait here for at least 40 ms after RX buffer is flushed
+     * Otherwise you will get stuck
+     */
+//    Wait(50);    
     //Request Software ID
     tda8029_putByte(0x60);  //ACK
     tda8029_putByte(0x00);  //Length
@@ -155,7 +167,7 @@ void tda8029_Init()
 #endif
 //    delay = timer_ms.timer;
 //    while( timer_ms.timer - delay < 100) ;
-    Wait(100);
+//    Wait(50);
 
     memset(buf, 0, 30);  
     //Initiate 5V

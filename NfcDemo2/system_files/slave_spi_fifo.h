@@ -1,12 +1,12 @@
 /* 
- * File:   slave_fifo.h
+ * File:   slave_spi_fifo.h
  * Author: TJ van Veen
  *
  * Created on 7 januari 2015, 14:22
  */
 
-#ifndef SLAVE_FIFO_H
-#define	SLAVE_FIFO_H
+#ifndef SLAVE_SPI_FIFO_H
+#define	SLAVE_SPI_FIFO_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -38,5 +38,5 @@ uint16_t fifo_getBytes( uint8_t *dst, fifo *f, uint8_t len );
 //------------------------------------------------------------------------------
 // Variables
 
-#endif	/* SLAVE_FIFO_H */
+#endif	/* SLAVE_SPI_FIFO_H */
 

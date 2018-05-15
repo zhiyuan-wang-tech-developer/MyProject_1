@@ -50,7 +50,6 @@
 #include "mcc_generated_files/mcc.h"
 #include "sam_reader_files/sam_interface.h"
 #include "pn5180_files/pn5180.h"
-#include "sam_reader_files/tda8029.h"
 #include "system_files/system.h"
 
 /*

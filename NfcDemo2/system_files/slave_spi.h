@@ -11,7 +11,6 @@
 //#include "HardwareProfile.h"
 //#include <peripheral/spi.h>
 #include "../mcc_generated_files/mcc.h"
-#include "slave_spi_fifo.h"
 #include "system.h"
 
 #include <stdint.h>

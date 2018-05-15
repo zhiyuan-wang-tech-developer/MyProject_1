@@ -31,16 +31,32 @@
 #include <string.h>
 /* TODO:  Include other files here if needed. */
 
-/* Provide C++ Compatibility */
-#ifdef __cplusplus
-extern "C" {
-#endif
 /* Detection Mode */
 #define DETECT_ONCE         false
 #define DETECT_CONTINUOUS   true
 
 #define FAILURE     false
 #define SUCCESS     true
+
+/* Type Definition */
+typedef uint8_t key_t[6];
+
+typedef enum {
+    cardUnknown,
+    cardMifareDesfire,
+    cardMifareClassic
+} cardType;
+
+/* Global Variables */
+/* Used for nfc_findCard() function */
+cardType currentCardType = cardUnknown;
+uint8_t currentCardUID[10] = {0};
+uint8_t currentCardData[20] = {0};
+
+/* Provide C++ Compatibility */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 bool nfc_init(void);
 void detectCard(bool detectLoopMode);

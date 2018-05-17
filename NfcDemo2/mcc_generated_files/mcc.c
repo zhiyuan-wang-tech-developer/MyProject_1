@@ -103,6 +103,7 @@ void SYSTEM_Initialize(void)
 //    SPI2_Initialize();
     UART1_Initialize();
     ADC1_Initialize();
+    TMR3_Initialize();
     TMR2_Initialize();
     TMR1_Initialize();
     INTERRUPT_Initialize();

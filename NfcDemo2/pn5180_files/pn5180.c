@@ -56,7 +56,7 @@ static uint8_t MifareClassicBlockData[16] = {0};
 static uint8_t MifareDesfireFileData[18] = {0};
 
 
-bool nfc_init(void)
+bool nfc_Init(void)
 {
     phStatus_t status = PH_ERR_SUCCESS;
     
@@ -97,8 +97,146 @@ bool nfc_init(void)
     return true;
 }
 
+
+
+
+/* Detect card once */
+bool detectCard(cardType *pDetectedCardTypeOut, uint8_t *pDetectedCardUidOut)
+{   
+    phStatus_t  status = PH_ERR_SUCCESS;
+    uint16_t    wTagsDetected = 0;  /* Stash the tag technologies that were detected during polling mode */
+    uint16_t    wATQA = 0;              /* Stash card ATQA information */
+    uint8_t     bSAK = 0;               /* Stash card SAK information */
+    uint8_t     bUidLength = 0;         /* Indicate the card UID length */
+    uint8_t     aUid[PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH] = {0};   /* Stash the card UID (Unique IDentifier) */
+    cardType    detectedCardType = cardUnknown;
+    
+    /* Start card detection */
+    /* Ready to detect a card */
+    /* Turn off LED */
+    LED_SetLow();            
+    /* Switch off the RF Field */
+    status = phhalHw_FieldOff(pHal);
+    /* Wait for 5100 ms */
+    status = phhalHw_Wait(sDiscLoop.pHalDataParams, PHHAL_HW_TIME_MICROSECONDS, 5100);
+    /* Configure Discovery loop for Polling Detection Mode */
+    status = phacDiscLoop_SetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_NEXT_POLL_STATE, PHAC_DISCLOOP_POLL_STATE_DETECTION);
+    /* Run Discovery loop */
+    status = phacDiscLoop_Run(&sDiscLoop, PHAC_DISCLOOP_ENTRY_POINT_POLL);
+    /* Check for the status code 
+     * Enter when single card/device is activated
+     */    
+    if((status & PH_ERR_MASK) == PHAC_DISCLOOP_DEVICE_ACTIVATED ) 
+    {    
+        /* Go here when a card is detected */
+        /* Get the detected tech type info */
+        status = phacDiscLoop_GetConfig(&sDiscLoop, PHAC_DISCLOOP_CONFIG_TECH_DETECTED, &wTagsDetected);
+        /* Check if the detected tech type is acquired from the discovery loop with success */
+        if((status & PH_ERR_MASK) == PH_ERR_SUCCESS)
+        {
+            /* Check for ISO/IEC 14443 Type A tech detection */
+            if(PHAC_DISCLOOP_CHECK_ANDMASK(wTagsDetected, PHAC_DISCLOOP_POS_BIT_MASK_A))
+            {
+                /* Read and store ATQA from Type A card */
+                wATQA = (uint16_t) sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[0];
+                wATQA |= sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aAtqa[1] << 8;
+                /* Read and store SAK from Type A card */
+                bSAK = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aSak;
+                /* Read and store UID length */
+                bUidLength = sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].bUidSize;
+                /* Read and store UID */
+                memcpy(aUid, sDiscLoop.sTypeATargetInfo.aTypeA_I3P3[0].aUid, bUidLength);
+
+                /* Check for MIFARE Classic 1K Card */
+                if( (wATQA == MIFARE_CLASSIC_1K_ATQA) && (bSAK == MIFARE_CLASSIC_1K_SAK) )                        
+                {
+                    /* Turn on the LED to indicate that a MIFARE Classic 1K card has been detected */
+                    LED_SetHigh();
+                    /* Card Type: MIFARE Classic 1K Card */
+                    detectedCardType = cardMifareClassic;
+                }
+                /* Check for MIFARE Classic 4K Card */
+                else if( (wATQA == MIFARE_CLASSIC_4K_ATQA) && (bSAK == MIFARE_CLASSIC_4K_SAK) )                        
+                {
+                    /* Turn on the LED to indicate that a MIFARE Classic 4K card has been detected */
+                    LED_SetHigh();
+                    /* Card Type: MIFARE Classic 4K Card */
+                    detectedCardType = cardMifareClassic;
+                }
+                /* Check for MIFARE DESFire Card */
+                else if( (wATQA == MIFARE_DESFIRE_ATQA) && (bSAK == MIFARE_DESFIRE_SAK) )                        
+                {
+                    /* Turn on the LED to indicate that a MIFARE DESFire card has been detected */
+                    LED_SetHigh();
+                    /* Card Type: MIFARE DESFire Card */
+                    detectedCardType = cardMifareDesfire;
+                }                
+                else
+                {
+                    /* Card Type: Unknown Card */
+                    detectedCardType = cardUnknown; 
+                }                 
+            }
+            else
+            {
+                /* Failed to detect ISO/IEC 14443 Type A tech */
+                detectedCardType = cardUnknown;
+#ifdef DEBUG_DETECT_CARD
+                breakpoint();
+#endif
+            }
+        }
+        else
+        {
+            /* Failed to acquire the detected tech type from the discovery loop */
+            detectedCardType = cardUnknown;
+#ifdef DEBUG_DETECT_CARD
+            breakpoint();
+#endif
+        }
+    }
+    else
+    {
+        /* No card/device is activated */
+        detectedCardType = cardUnknown;
+#ifdef DEBUG_DETECT_CARD
+        breakpoint();
+#endif
+    }
+    /* Output detected card type */
+    if( pDetectedCardTypeOut != NULL )
+    {
+        *pDetectedCardTypeOut = detectedCardType;
+    }
+    /* Output detected card UID */
+    if( pDetectedCardUidOut != NULL )
+    {
+        if( (detectedCardType == cardMifareClassic) || (detectedCardType == cardMifareDesfire) )
+        {
+            memcpy(pDetectedCardUidOut, aUid, bUidLength);
+        }
+        else
+        {
+            memset(pDetectedCardUidOut, 0, PHAC_DISCLOOP_I3P3A_MAX_UID_LENGTH);            
+        }
+    }
+    /* Return */
+    if( detectedCardType == cardUnknown )
+    {
+        return false;
+    }
+    else
+    {
+        /* Turn off the LED */
+        LED_SetLow();
+        return true;
+    }
+}
+
+
+
 /* Customize your detection mode: detect only once or detect continously */
-void detectCard(bool detectLoopMode)
+void detectCardTest(bool detectLoopMode)
 {   
     phStatus_t  status = PH_ERR_SUCCESS;
     uint16_t    wTagsDetected = 0;  /* Stash the tag technologies that were detected during polling mode */

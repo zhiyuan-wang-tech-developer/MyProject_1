@@ -16,6 +16,7 @@
         <itemPath>mcc_generated_files/spi1.h</itemPath>
         <itemPath>mcc_generated_files/adc1.h</itemPath>
         <itemPath>mcc_generated_files/spi2.h</itemPath>
+        <itemPath>mcc_generated_files/tmr3.h</itemPath>
       </logicalFolder>
       <logicalFolder name="nxp_reader_config_files"
                      displayName="nxp_reader_config_files"
@@ -40,6 +41,7 @@
         <itemPath>system_files/system.h</itemPath>
         <itemPath>system_files/slave_spi.h</itemPath>
         <itemPath>system_files/slave_spi_fifo.h</itemPath>
+        <itemPath>system_files/timer.h</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
@@ -61,6 +63,7 @@
         <itemPath>mcc_generated_files/spi1.c</itemPath>
         <itemPath>mcc_generated_files/adc1.c</itemPath>
         <itemPath>mcc_generated_files/spi2.c</itemPath>
+        <itemPath>mcc_generated_files/tmr3.c</itemPath>
       </logicalFolder>
       <logicalFolder name="nxp_reader_config_files"
                      displayName="nxp_reader_config_files"
@@ -8745,6 +8748,7 @@
         <itemPath>system_files/system.c</itemPath>
         <itemPath>system_files/slave_spi.c</itemPath>
         <itemPath>system_files/slave_spi_fifo.c</itemPath>
+        <itemPath>system_files/timer.c</itemPath>
       </logicalFolder>
       <itemPath>main_nfcdemo1.c</itemPath>
       <itemPath>main.c</itemPath>

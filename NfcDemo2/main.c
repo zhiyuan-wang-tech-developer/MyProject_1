@@ -59,7 +59,7 @@ int main(void)
 {
 //    breakpoint();
     // initialize the device
-    SYSTEM_Initialize();
+//    SYSTEM_Initialize();
 
 #ifdef DEBUG_SAM
 	CNCONAbits.ON = 0;     
@@ -69,9 +69,9 @@ int main(void)
 #ifdef DEBUG_PN5180
     CNCONAbits.ON = 0; 
     tda8029_Init();
-    if (nfc_init() == true)
+    if (nfc_Init() == true)
     {
-        detectCard(DETECT_CONTINUOUS);
+        detectCardTest(DETECT_CONTINUOUS);
     }
     else
     {

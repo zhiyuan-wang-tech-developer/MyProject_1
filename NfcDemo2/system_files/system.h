@@ -73,6 +73,10 @@ bool flagFindCardsDone = false;
 bool flagCardFound = false;
 
 key_t key[6] ={{0}, {0}, {0}, {0}, {0}, {0}};
+key_t *keyPtr;
+
+/* The 6-bytes Test Key only for Mifare Classic Card Authentication */
+key_t TestKey = {0x80, 0xAF, 0x30, 0x42, 0x1A, 0x20};
 
 uint8_t data[20];
 
@@ -88,6 +92,7 @@ void goSleep(void);
 void goIdle(void);
 void systemRun(void);
 void nfc_findCards(void);
+void key_Init(void);
 
 /* Provide C++ Compatibility */
 #ifdef __cplusplus

@@ -63,6 +63,11 @@ void INTERRUPT_Initialize (void)
     //    SubPriority: 0
         IPC8bits.CNIP = 5;
         IPC8bits.CNIS = 0;
+    //    TI: Timer 3
+    //    Priority: 3
+    //    SubPriority: 0
+        IPC3bits.T3IP = 3;
+        IPC3bits.T3IS = 0;
     //    TI: Timer 2
     //    Priority: 5
     //    SubPriority: 0
@@ -73,16 +78,16 @@ void INTERRUPT_Initialize (void)
     //    SubPriority: 0
         IPC8bits.U1IP = 4;
         IPC8bits.U1IS = 0;
-    //    TI: Timer 1
-    //    Priority: 5
-    //    SubPriority: 0
-        IPC1bits.T1IP = 5;
-        IPC1bits.T1IS = 0;
     //    ADI: ADC1 Convert Done
     //    Priority: 7
     //    SubPriority: 0
         IPC5bits.AD1IP = 7;
         IPC5bits.AD1IS = 0;
+    //    TI: Timer 1
+    //    Priority: 5
+    //    SubPriority: 0
+        IPC1bits.T1IP = 5;
+        IPC1bits.T1IS = 0;
 
     //  Enable the multi vector
     INTCONbits.MVEC = 1;

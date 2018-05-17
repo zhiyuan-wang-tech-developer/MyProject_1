@@ -23,10 +23,13 @@
 
 /* This section lists the other files that are included in this file.
  */
-#include "system.h"
-/* TODO:  Include other files here if needed. */
 #include "../mcc_generated_files/mcc.h"
+#include "system.h"
 #include "slave_spi.h"
+#include "timer.h"
+/* TODO:  Include other files here if needed. */
+
+
 
 /* ************************************************************************** */
 /* ************************************************************************** */
@@ -116,14 +119,19 @@ __inline void watchdogTimerClear(void)
 void systemRun(void)
 {
 //    watchdogTimerEnable();
-
+    SYSTEM_Initialize();
     spi_slaveInit();
-    
+    nfc_Init();
+    key_Init();    
+    memcpy( key[0], TestKey, sizeof(key_t) );
     /* Start main loop */
     while(1)
     {
         //Clear watchdog timer
 //        watchdogTimerClear();
+        
+        spi_Simulation();
+        
         //Do some things only when awake/asleep
         switch( runMode )
         {
@@ -132,7 +140,13 @@ void systemRun(void)
                 /* Detect NFC card if required */
                 nfc_findCards();
                 // If no card found, go back to sleep
-                if( flagFindCardsDone == true && typeFound == TYPE_NONE )
+                if( (flagFindCardsDone == true) && (typeFound == TYPE_NONE) )
+                {
+                    Timer_Stop(&systemTimer);
+                    runMode = runSleep;
+                }
+                
+                if( systemTimer.isTimedOut )
                 {
                     runMode = runSleep;
                 }
@@ -163,6 +177,11 @@ void systemRun(void)
                 /* Wake up all components */
                 SYSTEM_Initialize();
                 spi_slaveInit();
+                nfc_Init();
+//                tda8029_Init();
+                /* Configure system timer to 200ms time out */
+                Timer_Set(&systemTimer, 2000);
+                Timer_Start(&systemTimer);
                 runMode = runNormal;
                 break;
             }
@@ -183,6 +202,10 @@ void nfc_findCards(void)
     if( flagFindCards == false )
     {
         //turn off field
+        flagFindCardsDone   = false;
+        flagCardFound       = false;
+        typeFound           = TYPE_NONE;
+        currentCardType = cardUnknown;
         return;
     }
     else
@@ -197,20 +220,20 @@ void nfc_findCards(void)
         memset(currentCardData, 0, sizeof(currentCardData));
     }
 
-    tda8029_Init();
     //find a card
-    if( nfc_init() == true )
+    if( detectCard(&currentCardType, currentCardUID) == SUCCESS )
     {
-        detectCard(DETECT_ONCE);
+        /* A card is found */
+//        breakpoint();        
     }
     else
     {
-        breakpoint();
-        return;
+        /* No card is found */
+//        breakpoint();
     }
 
-    flagFindCards = false;
-    flagFindCardsDone = true;
+//    flagFindCards = false;
+//    flagFindCardsDone = true;
 
     //Check if the card is one of the types we want to find.
     if( currentCardType == cardUnknown )
@@ -221,11 +244,18 @@ void nfc_findCards(void)
         typeFound           = TYPE_NONE;
         return;
     }
-
+    else
+    {
+        flagFindCards       = false;
+        flagFindCardsDone   = true;
+        flagCardFound       = false;
+        typeFound           = TYPE_NONE;
+    }
+//    breakpoint();
     //for each position in the mask (in the last iteration, the value of mask gets shifted out of 8-bit range)
     for( mask = 1; mask > 0 && !flagCardFound; mask <<= 1 )
     {
-        if (~requestMask & mask) {
+        if ((~requestMask) & mask) {
             //bit not set in request mask, try next one
             continue;
         }
@@ -242,6 +272,7 @@ void nfc_findCards(void)
                 flagCardFound       = true;
                 typeFound           = mask;
                 memcpy(data, currentCardUID, 7); //save the UID in data to be sent
+                breakpoint(); 
                 break;
 
             case TYPE_DESFIRE_SAM:
@@ -253,8 +284,18 @@ void nfc_findCards(void)
 
                 //Found a DESFire, read out the unique part of the Card Number
                 //First wake up the SAM reader
-//                tda8029_Init();
-
+                tda8029_Init();
+                if( MifareDesfire_AuthenticateCard_ReadFile(currentCardData) == FAILURE )
+                {
+                    /* Mifare DESFire Card Authentication Failure */
+                    breakpoint();
+                    continue;
+                }
+                else
+                {
+                    /* Mifare DESFire Card Authentication Success */
+                    breakpoint();
+                }
                 memcpy(desfireCardInfo.rawData, currentCardData, 18);
 
                 //Extract the unique ID part
@@ -275,6 +316,44 @@ void nfc_findCards(void)
 
                 //Authenticate the MIFARE
 //                if( !nfc_authentMifare(UID, mask) ) continue;
+                switch (mask)
+                {
+                    case TYPE_MIFARE_KEY1:
+                        keyPtr = &key[0];
+                        breakpoint();
+                        break;
+                    case TYPE_MIFARE_KEY2:
+                        keyPtr = &key[1];
+                        breakpoint();
+                        break;
+                    case TYPE_MIFARE_KEY3:
+                        keyPtr = &key[2];
+                        breakpoint();
+                        break;
+                    case TYPE_MIFARE_KEY4:
+                        keyPtr = &key[3];
+                        breakpoint();
+                        break;
+                    case TYPE_MIFARE_KEY5:
+                        keyPtr = &key[4];
+                        breakpoint();
+                        break;
+                    case TYPE_MIFARE_KEY6:
+                        keyPtr = &key[5];
+                        breakpoint();
+                        break;
+                }                
+                if( MifareClassic_AuthenticateCard_ReadBlock( (uint8_t *)keyPtr, currentCardData) == FAILURE )
+                {
+                    /* Mifare Classic Card Authentication Failure */
+                    breakpoint();
+                    continue;
+                }
+                else
+                {
+                    /* Mifare Classic Card Authentication Success */
+                    breakpoint();
+                }
 
                 //read the data
                 memcpy(data, currentCardData, 16);
@@ -292,6 +371,16 @@ void nfc_findCards(void)
     //checked everything, either we found something or nothing is there
     flagFindCards       = false;
     flagFindCardsDone   = true;
+}
+
+void key_Init(void)
+{
+    uint8_t i, j, k;
+    for( i = 0; i < 6; i++ )
+    {
+        for( k = 0, j = 0; k < 6; k++, j^=0x55 )
+            key[i][k] = j;
+    }
 }
 /* *****************************************************************************
  End of File

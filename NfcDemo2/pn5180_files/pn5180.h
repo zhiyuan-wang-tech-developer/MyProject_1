@@ -38,6 +38,8 @@
 #define FAILURE     false
 #define SUCCESS     true
 
+//#define DEBUG_DETECT_CARD
+
 /* Type Definition */
 typedef uint8_t key_t[6];
 
@@ -58,8 +60,9 @@ uint8_t currentCardData[20] = {0};
 extern "C" {
 #endif
 
-bool nfc_init(void);
-void detectCard(bool detectLoopMode);
+bool nfc_Init(void);
+bool detectCard(cardType *pDetectedCardTypeOut, uint8_t *pDetectedCardUidOut);
+void detectCardTest(bool detectLoopMode);
 bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDataOut);
 bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut);
 bool MifareDesfire_SAM_authentication(void);

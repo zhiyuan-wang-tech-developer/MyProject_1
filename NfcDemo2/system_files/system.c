@@ -128,9 +128,8 @@ void systemRun(void)
     while(1)
     {
         //Clear watchdog timer
-//        watchdogTimerClear();
-        
-        spi_Simulation();
+//        watchdogTimerClear();       
+//        SPI_Slave_Simulation_Run();
         
         //Do some things only when awake/asleep
         switch( runMode )
@@ -165,7 +164,8 @@ void systemRun(void)
                 do
                 {
                     goSleep();
-                }while( KL_SS2_N_GetValue() );
+                }
+                while( KL_SS2_N_GetValue() );
                 /* Only exit from the sleep mode if the mainboard selects PIC32MX MCU */
                 runMode = runWaking;
 //                breakpoint();  

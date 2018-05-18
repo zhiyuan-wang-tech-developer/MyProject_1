@@ -1,11 +1,9 @@
 #include "slave_spi.h"
 #include "slave_spi_fifo.h"
-//#include "nfc_iface.h"
-//#include "clock.h"
 
 //Change me to issue command
-volatile int spi_SimStep = 1;
-volatile bool spi_simulation = false;
+volatile uint8_t SPI_Simulation_Step = 0;
+volatile bool SPI_Simulation_Flag = false;
 
 volatile bool flagProcessCommand = false;
 
@@ -35,23 +33,12 @@ extern bool    flagCardFound;
 
 extern uint8_t data[20];
 
-
-
-void spi_endSimulation();
-void spi_startSimulation();
-
-void spi_simulateReadCommand();
-void spi_simulateGetKeyCommand( uint8_t keyNr, key_t key);
-void spi_simulateSetKeyCommand( uint8_t keyNr, key_t key);
-void spi_simulateRequestCommand( uint8_t mask );
-
-
 //------------------------------------------------------------------------------
 // SPI Interrupt
 
 void __ISR(_SPI2_VECTOR, IPL6AUTO ) spi_IntHandler(void){
     
-    if( spi_simulation ) return;
+    if( SPI_Simulation_Flag ) return;
     
 //    N_KL_INT = 0;   //busy
     KL_INT2_BUSY_N_SetLow();
@@ -132,7 +119,7 @@ void spi_getByte( uint8_t *b ){
 void spi_slaveInit(){
     uint8_t dummy;
 
-    if( spi_simulation ) return;
+    if( SPI_Simulation_Flag ) return;
     
 //    N_KL_INT = 0; //busy
     KL_INT2_BUSY_N_SetLow();
@@ -253,118 +240,6 @@ void spi_processMessages(){
     }//switch( state )
 }//spi_processMessages()
 
-
-
-
-void spi_Simulation(){    
-    switch( spi_SimStep ){
-        case 0: 
-            //wait for input
-            break;
-        
-        case 1:
-            spi_startSimulation();
-            break;
-
-        case 2:
-            spi_startSimulation();
-            spi_simulateSetKeyCommand( 1, TestKey );
-            spi_simulateRequestCommand( TYPE_MIFARE_KEY1 );
-            break;
-            
-        case 3:
-            spi_startSimulation();
-            spi_simulateRequestCommand( TYPE_DESFIRE_SAM );
-            break;
-            
-        case 4:
-            spi_startSimulation();
-            spi_simulateReadCommand();
-            break;
-            
-            
-        case 0xFF:
-            //Enable
-            spi_endSimulation();
-            break;
-    }
-    spi_SimStep = 0;         
-}
-
-void spi_startSimulation(){
-    //Don't allow the mainboard to interrupt us
-    KL_INT2_BUSY_N_SetLow(); 
-    spi_simulation = true;
-}
-
-void spi_endSimulation(){
-    //Allow the mainboard to interrupt us
-    KL_INT2_BUSY_N_SetHigh(); 
-    spi_simulation = false;
-}
-
-void spi_simulateRequestCommand( uint8_t mask ){    
-    r_idx = 0;
-    flagProcessCommand  = true;
-
-    spi_handleCommand(CMD_CheckCardAvailable, CMD_CheckCardAvailable);
-    spi_handleCommand(CMD_CheckCardAvailable, mask);
-    spi_handleCommand(CMD_CheckCardAvailable, 0xFF);    
-    
-    flagProcessCommand  = false;
-   
-}
-
-void spi_simulateSetKeyCommand( uint8_t keyNr, key_t key){
-    int i;
-            r_idx = 0;
-        flagProcessCommand  = true;
-
-    spi_handleCommand(CMD_SetKey, CMD_SetKey);
-    spi_handleCommand(CMD_SetKey, keyNr);
-    for( i = 0; i < sizeof(key_t); i++ ){
-        spi_handleCommand(CMD_SetKey, key[i]);
-    }
-    
-    flagProcessCommand  = false;
-   
-}
-
-void spi_simulateGetKeyCommand( uint8_t keyNr, uint8_t key[6]){
-    int i;
-    
-    r_idx = 0;
-    flagProcessCommand  = true;
-
-    spi_handleCommand(CMD_GetKey, CMD_GetKey);
-    spi_handleCommand(CMD_GetKey, keyNr);
-    spi_handleCommand(CMD_GetKey, 0xff);
-    for( i = 0; i < sizeof(key); i++ ){
-        spi_handleCommand(CMD_GetKey, key[i]);
-    }
-    
-    flagProcessCommand  = false;
-   
-}
-
-void spi_simulateReadCommand(){
-    r_idx = 0;
-    flagProcessCommand  = true;
-
-        
-     spi_handleCommand( CMD_ReadData, CMD_ReadData);
-     spi_handleCommand( CMD_ReadData, 0xff);
-     spi_handleCommand( CMD_ReadData, 0xff);
-     int i;
-     for( i = 0 ; i < 16; i++ ){
-         spi_handleCommand( CMD_ReadData, 0xff);
-     }
-     
-     flagProcessCommand  = false;
-   
-}
-
-
 //------------------------------------------------------------------------------
 // Handle the commands
 
@@ -375,8 +250,8 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
     //Note: already sent the command byte back
     switch( cmd ){
         case CMD_CheckCardAvailable:
-            //cmd: {cmd, request ,  x}
-            //response: {cmd,       found}
+            //rx cmd: {cmd, requestMask, x}
+            //tx response: {cmd, found}
             switch( r_idx++ ){
                 case 0:
                     //cmd
@@ -387,7 +262,8 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
                     if( rx_byte ){
                         flagFindCardsDone = false;
                         requestMask       = rx_byte;
-                        memset( data, 0, 16);
+                        memset( data, 0, 16 );
+                        breakpoint();
                     }
                     
                     //set response
@@ -413,10 +289,9 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
             break;
             
         case CMD_ReadData:
-
             //check which byte we received
-            //cmd: {cmd,    x,  x,   [16x] }
-            //response: { cmd, found, [16 byte data] }
+            //rx cmd: {cmd, x, x, [16x]}
+            //tx response: {cmd, found, [16 byte data]}
 //            breakpoint();
             switch( r_idx++ ){
                 case 0:
@@ -429,21 +304,21 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
                         case TYPE_NONE:
                             r_idx = 0xFF; //reset r_idx
                             flagProcessCommand = false;    //say we're done
-                            breakpoint();
+//                            breakpoint();
                             break;
                         case TYPE_DESFIRE_SAM:
                             fifo_putBytes( &tx, data, 10 );
-                            fifo_putBytes( &tx, empty, 6);
-                            breakpoint();
+                            fifo_putBytes( &tx, empty, 6 );
+//                            breakpoint();
                             break;
                         case TYPE_CARD_ID:
                             fifo_putBytes( &tx, data, 7 );
-                            fifo_putBytes( &tx, empty, 9);
-                            breakpoint();
+                            fifo_putBytes( &tx, empty, 9 );
+//                            breakpoint();
                             break;
                         default:
                             fifo_putBytes( &tx, data, 16 );
-                            breakpoint();
+//                            breakpoint();
                             break;
                     }//switch(typeFound)
 
@@ -467,9 +342,9 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
             break;
 
         case CMD_GetKey:
-            //cmd: {cmd, keynr,  x,     6x}
-            //response: {cmd,   keynr, 6-byte key}
-            breakpoint();
+            //rx cmd: {cmd, keynr, x, [6x]}
+            //tx response: {cmd, keynr, [6-byte key]}
+//            breakpoint();
             //check which byte we received
             switch( r_idx++ ){
                 case 0:
@@ -500,8 +375,8 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
             break;
 
         case CMD_SetKey:
-            //cmd: {cmd, keynr, 6-byte key}
-            //response: {cmd,   6x}
+            //rx cmd: {cmd, keynr, [6-byte key]}
+            //tx response: {cmd, [6x]}
             //breakpoint();
             //check which byte we received
             switch( r_idx ){
@@ -539,3 +414,128 @@ void spi_handleCommand( uint8_t cmd, uint8_t rx_byte ){
             break;
     }//switch( cmd )
 }//spi_handleCommand()
+
+
+
+//------------------------------------------------------------------------------
+// SPI Slave Simulation Test
+
+void SPI_Slave_Simulation_Run()
+{    
+    switch( SPI_Simulation_Step++ )
+    {
+        case 0: 
+            //wait for input
+            break;
+        
+        case 1:
+            SPI_Slave_Simulation_Start();
+            break;
+
+        case 2:
+            SPI_Slave_Simulation_Start();
+            SPI_SetKey_Simulation( 1, TestKey );
+            SPI_CheckCardAvailable_Simulation( TYPE_MIFARE_KEY1 );
+            breakpoint();
+            break;
+
+        case 3:
+            SPI_Slave_Simulation_Start();
+            SPI_ReadData_Simulation();
+            breakpoint();
+            break;
+            
+        case 4:
+            SPI_Slave_Simulation_Start();
+            SPI_CheckCardAvailable_Simulation( TYPE_DESFIRE_SAM );
+            breakpoint();
+            break;
+            
+        case 5:
+            SPI_Slave_Simulation_Start();
+            SPI_ReadData_Simulation();
+            breakpoint();
+            break;
+            
+        default:
+            //Enable
+            SPI_Slave_Simulation_Stop();
+            SPI_Simulation_Step = 1; 
+            break;
+    }        
+}
+
+void SPI_Slave_Simulation_Start()
+{
+    //Don't allow the main board to interrupt us
+    KL_INT2_BUSY_N_SetLow(); 
+    SPI_Simulation_Flag = true;
+}
+
+void SPI_Slave_Simulation_Stop()
+{
+    //Allow the main board to interrupt us
+    KL_INT2_BUSY_N_SetHigh(); 
+    SPI_Simulation_Flag = false;
+}
+
+void SPI_CheckCardAvailable_Simulation( uint8_t mask )
+{    
+    r_idx = 0;
+    flagProcessCommand = true;
+    //rx cmd: {cmd, requestMask, x}
+    //tx response: {cmd, found}
+    spi_handleCommand(CMD_CheckCardAvailable, CMD_CheckCardAvailable);
+    spi_handleCommand(CMD_CheckCardAvailable, mask);
+    spi_handleCommand(CMD_CheckCardAvailable, 0xFF);
+    flagProcessCommand = false;
+}
+
+void SPI_ReadData_Simulation()
+{
+    int i;
+    r_idx = 0;
+    flagProcessCommand = true;
+    //rx cmd: {cmd, x, x, [16x]}
+    //tx response: {cmd, found, [16 byte data]}    
+    spi_handleCommand(CMD_ReadData, CMD_ReadData);
+    spi_handleCommand(CMD_ReadData, 0xFF);
+    spi_handleCommand(CMD_ReadData, 0xFF);
+    for( i = 0; i < 16; i++ )
+    {
+        spi_handleCommand(CMD_ReadData, 0xFF);
+    }   
+    flagProcessCommand = false;
+}
+
+void SPI_SetKey_Simulation( uint8_t keyNr, key_t key )
+{
+    int i;
+    r_idx = 0;
+    flagProcessCommand = true;
+    //rx cmd: {cmd, keynr, [6-byte key]}
+    //tx response: {cmd, [6x]}
+    spi_handleCommand(CMD_SetKey, CMD_SetKey);
+    spi_handleCommand(CMD_SetKey, keyNr);
+    for( i = 0; i < sizeof(key_t); i++ )
+    {
+        spi_handleCommand(CMD_SetKey, key[i]);
+    }    
+    flagProcessCommand = false;  
+}
+
+void SPI_GetKey_Simulation( uint8_t keyNr, key_t key )
+{
+    int i; 
+    r_idx = 0;
+    flagProcessCommand = true;
+    //rx cmd: {cmd, keynr, x, [6x]}
+    //tx response: {cmd, keynr, [6-byte key]}
+    spi_handleCommand(CMD_GetKey, CMD_GetKey);
+    spi_handleCommand(CMD_GetKey, keyNr);
+    spi_handleCommand(CMD_GetKey, 0xFF);
+    for( i = 0; i < sizeof(key_t); i++ ){
+        spi_handleCommand(CMD_GetKey, key[i]);
+    }
+    flagProcessCommand = false;   
+}

@@ -3,14 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/NxpNfcRdLib/comps/phhalHw/src/Pn5180/phhalHw_Pn5180.c</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/system_files/system.c</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/main.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/NxpNfcRdLib/comps/phPlatform/src/phPlatform.c</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/system_files/slave_spi.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/system_files/timer.c</file>
+            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/NxpNfcRdLib/comps/phbalReg/src/Pic32mxSPI/phbalReg_Pic32mxSpi.c</file>
             <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/pn5180_files/pn5180.c</file>
-            <file>file:/D:/DynaTron/NFC_Project/zhiyuan/klilotronics/nfc_reader_v2/NfcDemo2/system_files/system.h</file>
         </group>
     </open-files>
 </project-private>

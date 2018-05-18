@@ -39,6 +39,15 @@ void spi_processMessages(void);
 void spi_handleCommand( uint8_t cmd, uint8_t rx_byte );
 void spi_reset(void);
 
+// For Test Only 
+void SPI_Slave_Simulation_Run();
+void SPI_Slave_Simulation_Start();
+void SPI_Slave_Simulation_Stop();
+void SPI_CheckCardAvailable_Simulation( uint8_t mask );
+void SPI_ReadData_Simulation();
+void SPI_GetKey_Simulation( uint8_t keyNr, key_t key );
+void SPI_SetKey_Simulation( uint8_t keyNr, key_t key );
+
 //------------------------------------------------------------------------------
 // Variables
 

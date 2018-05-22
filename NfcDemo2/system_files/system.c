@@ -1,17 +1,20 @@
 /* ************************************************************************** */
 /** Descriptive File Name
 
-  @Company
-    Company Name
+  @Author
+    Zhiyuan Wang
 
+  @Modified on
+    2018-05-22
+ 
   @File Name
-    filename.c
+    system.c
 
   @Summary
-    Brief description of the file.
+    system source file.
 
   @Description
-    Describe the purpose of this file.
+    Define all the functions used in the system level.
  */
 /* ************************************************************************** */
 
@@ -23,25 +26,28 @@
 
 /* This section lists the other files that are included in this file.
  */
+/* TODO: Include other files here if needed. */
 #include "../mcc_generated_files/mcc.h"
 #include "system.h"
 #include "slave_spi.h"
 #include "timer.h"
-/* TODO:  Include other files here if needed. */
-
-
 
 /* ************************************************************************** */
 /* ************************************************************************** */
-/* Section: File Scope or Global Data                                         */
+/* Section: Global Data                                                       */
 /* ************************************************************************** */
 
+/*******************************************************************************
+**   Function Definitions
+*******************************************************************************/
 
-/* ************************************************************************** */
-/* ************************************************************************** */
-// Section: Local Functions                                                   */
-/* ************************************************************************** */
+/** 
+  @Function
+    void reset(void) 
 
+  @Summary
+    Reset the PIC32MX MCU.
+ */
 void reset(void)
 {
     //Clear reset cause
@@ -72,7 +78,13 @@ void reset(void)
     while(1);
 }
 
-/* Enter sleep mode */
+/** 
+  @Function
+    void goSleep(void) 
+
+  @Summary
+    The PIC32MX MCU enters into sleep mode after it is invoked.
+ */
 void goSleep(void)
 {
     //Go to sleep when wait is issued
@@ -85,7 +97,13 @@ void goSleep(void)
     Nop();
 }
 
-/* Enter idle mode */
+/** 
+  @Function
+    void goIdle(void) 
+
+  @Summary
+    The PIC32MX MCU enters into idle mode after it is invoked.
+ */
 void goIdle(void)
 {
     //Go to idle when wait is issued
@@ -98,39 +116,81 @@ void goIdle(void)
     Nop();
 }
 
-/* Enable the Watchdog Timer by software */
+/** 
+  @Function
+    void watchdogTimerEnable(void) 
+
+  @Summary
+    The Watchdog Timer in PIC32MX MCU is enabled by software.
+ */
 __inline void watchdogTimerEnable(void)
 {
     WDTCONbits.ON = 1;
 }
 
-/* Disable the Watchdog Timer by software */
+/** 
+  @Function
+    void watchdogTimerDisable(void) 
+
+  @Summary
+    The Watchdog Timer in PIC32MX MCU is disabled by software.
+ */
 __inline void watchdogTimerDisable(void)
 {
     WDTCONbits.ON = 0;
 }
 
-/* Clear the Watchdog Timer by software */
+/** 
+  @Function
+    void watchdogTimerClear(void) 
+
+  @Summary
+    The Watchdog Timer in PIC32MX MCU is cleared by software.
+ */
 __inline void watchdogTimerClear(void)
 {
     WDTCONbits.WDTCLR = 1;
 }
 
+/* ************************************************************************** */
+/** 
+  @Function
+    void systemRun(void)
+
+  @Summary
+    The NFC card reader system running function
+
+  @Description
+    This is the entry point for the card reader system.
+
+  @Precondition
+    The systemRun() is called in the main() function directly.
+
+  @Parameters
+    None
+
+  @Returns
+    None
+ */
 void systemRun(void)
 {
 //    watchdogTimerEnable();
+    /* Initialize PIC32MX MCU 
+     * SPI slave port with the main board
+     * NFC reader library
+     * 6 key entries
+     */
     SYSTEM_Initialize();
     spi_slaveInit();
     nfc_Init();
-    key_Init();    
+    key_Init();
+    // Assign the test key to key 0
     memcpy( key[0], TestKey, sizeof(key_t) );
     /* Start main loop */
     while(1)
     {
-        //Clear watchdog timer
 //        watchdogTimerClear();       
-//        SPI_Slave_Simulation_Run();
-        
+//        SPI_Slave_Simulation_Run();        
         //Do some things only when awake/asleep
         switch( runMode )
         {
@@ -138,13 +198,16 @@ void systemRun(void)
             {
                 /* Detect NFC card if required */
                 nfc_findCards();
-                // If no card found, go back to sleep
+                // If finding card is done and no card is found, go to sleep mode
                 if( (flagFindCardsDone == true) && (typeFound == TYPE_NONE) )
                 {
+                    // Stop the system timeout timer
                     Timer_Stop(&systemTimer);
                     runMode = runSleep;
                 }
-                
+                /* If the PIC32MX is always working in the normal running mode to find card 
+                 * but the system timer is timed out, then PIC32MX is forced to go to sleep mode 
+                 */
                 if( systemTimer.isTimedOut )
                 {
                     runMode = runSleep;
@@ -155,36 +218,40 @@ void systemRun(void)
             case runSleep:
             {
                 /* Shut down the unused peripherals */
-                                
-                /* Set pins to all inputs to conserve power */
-//                TRISA = 0xFFFF;
-                KL_INT2_BUSY_N_SetLow();       //busy
-//                TRISB = ~(1<<3);    //make sure the MSIO and busy line don't do weird things
-                
+                pn5180_Sleep();
+                tda8029_Sleep();                                
+                /* Set port A pins to all inputs to conserve power */
+                TRISA = 0xFFFF;
+                /* PIC32MX is busy now */
+                KL_INT2_BUSY_N_SetLow();       //LATB3 = 0
+                /* Set port B pins to all inputs to conserve power
+                 * Only Port B3 (BUSY line) is set to output
+                 * Make sure the MISO and busy line don't do weird things
+                 */
+                TRISB = ~(1<<3); //Only Port B3 (BUSY line) is output                
                 do
                 {
                     goSleep();
                 }
                 while( KL_SS2_N_GetValue() );
-                /* Only exit from the sleep mode if the mainboard selects PIC32MX MCU */
+                /* Only exit from the sleep mode if the main board selects PIC32MX MCU */
                 runMode = runWaking;
 //                breakpoint();  
                 break;
-            }
+            }//case {runSleep}
 
             case runWaking:
             {
-                /* Wake up all components */
+                /* After the PIC32MX is waken up, all components are initialized */
                 SYSTEM_Initialize();
                 spi_slaveInit();
                 nfc_Init();
-//                tda8029_Init();
-                /* Configure system timer to 200ms time out */
+                /* Configure the system timer to 2000 ms timeout */
                 Timer_Set(&systemTimer, 2000);
                 Timer_Start(&systemTimer);
                 runMode = runNormal;
                 break;
-            }
+            }// case {runWaking}
             
             default: 
                 runMode = runSleep;
@@ -192,8 +259,29 @@ void systemRun(void)
     }
 }
 
-//------------------------------------------------------------------------------
-// NFC process
+/* ************************************************************************** */
+/** 
+  @Function
+    void nfc_findCards(void)
+
+  @Summary
+    The NFC card finding function
+
+  @Description
+    This function can perform
+    1. Detect NFC card if the flagFindCards is set
+    2. Read card UID to data[] according to the requestMask
+    3. Authenticate card and read card data within it according to the requestMask
+
+  @Precondition
+    The nfc_findCards() is called by the systemRun() function.
+
+  @Parameters
+    None
+
+  @Returns
+    None
+ */
 void nfc_findCards(void) 
 {
     uint8_t mask = 1;
@@ -373,6 +461,16 @@ void nfc_findCards(void)
     flagFindCardsDone   = true;
 }
 
+/** 
+  @Function
+    void key_Init(void) 
+
+  @Summary
+    Initialize the 6 sets of MIFARE CLASSIC card keys.
+ 
+  @Precondition
+    The global key array key_t key[6] must be defined beforehand.
+ */
 void key_Init(void)
 {
     uint8_t i, j, k;

@@ -1,11 +1,10 @@
 /* 
  * File:   tda8029.h
  * Author: TJ van Veen
+ * Created on: 6 januari 2015, 12:22
  *
- * Created on 6 januari 2015, 12:22
- *
- * Modifier: Zhiyuan Wang
- * Changed on 2018-05-03 14:40
+ * Author: Zhiyuan Wang
+ * Changed on: 2018-05-03 14:40
  * 
  */
 
@@ -13,11 +12,9 @@
 #define	TDA8029_H
 
 #include "../mcc_generated_files/mcc.h"
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-//#include "fifo.h"
 
 //------------------------------------------------------------------------------
 // Definitions

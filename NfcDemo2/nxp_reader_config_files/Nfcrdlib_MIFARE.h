@@ -1,8 +1,8 @@
 /*
  * Nfcrdlib_MIFARE.h
  *
- *  Created on: April 20, 2018
- *      Author: Zhiyuan Wang
+ * Author: Zhiyuan Wang
+ * Created on: April 20, 2018
  */
 
 #ifndef NFCRDLIB_MIFARE_H_

@@ -1,18 +1,18 @@
 /* 
  * File:   slave_spi.h
  * Author: TJ van Veen
- *
- * Created on 6 januari 2015, 12:22
+ * Created on: 6 januari 2015, 12:22
+ * 
+ * Author: Zhiyuan Wang
+ * Changed on: 2018-05-22 17:53
+ * 
  */
 
 #ifndef SLAVE_SPI_H
 #define	SLAVE_SPI_H
 
-//#include "HardwareProfile.h"
-//#include <peripheral/spi.h>
 #include "../mcc_generated_files/mcc.h"
 #include "system.h"
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -20,7 +20,7 @@
 //------------------------------------------------------------------------------
 // Definitions
 
-//SPI commands
+// SPI commands
 #define CMD_CheckCardAvailable  0x01
 #define CMD_ReadData            0x02
 #define CMD_SetKey              0x03
@@ -32,7 +32,6 @@
 
 //------------------------------------------------------------------------------
 // Prototypes
-
 void spi_slaveInit();
 void spi_slaveClose();
 void spi_processMessages(void);

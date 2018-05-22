@@ -1,9 +1,10 @@
 /* 
  * File:   sam_interface.c
  * Author: TJ van Veen
+ * Created on: 6 januari 2015, 9:54
  * 
- * Modifier: Zhiyuan Wang
- * Changed on 2018-05-03 13:08
+ * Author: Zhiyuan Wang
+ * Changed on: 2018-05-03 13:08
  * 
  */
 #include "sam_interface.h"

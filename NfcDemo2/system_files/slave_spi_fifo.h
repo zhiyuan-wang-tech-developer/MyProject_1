@@ -2,7 +2,7 @@
  * File:   slave_spi_fifo.h
  * Author: TJ van Veen
  *
- * Created on 7 januari 2015, 14:22
+ * Created on: 7 januari 2015, 14:22
  */
 
 #ifndef SLAVE_SPI_FIFO_H

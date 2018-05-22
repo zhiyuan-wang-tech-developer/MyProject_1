@@ -1,3 +1,10 @@
+/* 
+ * File:   slave_spi_fifo.c
+ * Author: TJ van Veen
+ *
+ * Created on: 7 januari 2015, 14:22
+ */
+
 #include "slave_spi_fifo.h"
 
 __inline bool fifo_putByte( fifo *f, uint8_t b){

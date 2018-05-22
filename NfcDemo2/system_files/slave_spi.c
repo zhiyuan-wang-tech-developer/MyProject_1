@@ -1,3 +1,13 @@
+/* 
+ * File:   slave_spi.c
+ * Author: TJ van Veen
+ * Created on: 6 januari 2015, 12:22
+ * 
+ * Author: Zhiyuan Wang
+ * Changed on: 2018-05-22 17:53
+ * 
+ */
+
 #include "slave_spi.h"
 #include "slave_spi_fifo.h"
 

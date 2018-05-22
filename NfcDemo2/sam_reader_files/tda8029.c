@@ -1,16 +1,14 @@
 /* 
- * File:   tda8029.h
+ * File:   tda8029.c
  * Author: TJ van Veen
+ * Created on: 6 januari 2015, 12:22
  *
- * Created on 6 januari 2015, 12:22
- *
- * Modifier: Zhiyuan Wang
- * Changed on 2018-05-03 14:42
+ * Author: Zhiyuan Wang
+ * Changed on: 2018-05-03 14:42
  * 
  */
 
 #include "tda8029.h"
-//#include "clock.h"
 
 // Flush RX Buffer
 __inline void FlushRxBuffer(void);
@@ -203,16 +201,20 @@ void tda8029_Init()
 void tda8029_Sleep()
 {
     //Disable UART
-    U1MODEbits.ON   = 0;
+    U1MODEbits.ON = 0;
 
-    //Disable RX Interrupt
-    IEC1bits.U1RXIE  = 0;
+    //Disable TX and RX Interrupts
+    IEC1bits.U1TXIE = 0;
+    IEC1bits.U1RXIE = 0;
     
-    //Clear RX Interrupt Flag
+    //Clear TX and RX Interrupt Flags
+    IFS1bits.U1TXIF = 0;
     IFS1bits.U1RXIF = 0;
     
-    //Disable chip
+    /* Disable TDA8029 chip */
+    // Keep the TDA8029 in RESET mode
     SIM_RESET_SetHigh();
+    // Shut down the TDA8029
     SIM_SHDN_N_SetLow();
 }//tda8029_Sleep()
 

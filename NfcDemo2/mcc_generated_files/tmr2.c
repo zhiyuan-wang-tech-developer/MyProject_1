@@ -73,7 +73,7 @@ typedef struct _TMR_OBJ_STRUCT
     /* Timer Elapsed */
     bool                                                    timerElapsed;
     /*Software Counter value*/
-    uint8_t                                                 count;
+    volatile uint8_t                                                 count;
 
 } TMR_OBJ;
 

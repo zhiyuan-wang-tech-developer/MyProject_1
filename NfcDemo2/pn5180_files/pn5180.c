@@ -1,17 +1,20 @@
 /* ************************************************************************** */
 /** Descriptive File Name
 
-  @Company
-    Company Name
+  @Author
+    Zhiyuan Wang
+
+  @Modified on
+    2018-05-22 
 
   @File Name
     pn5180.c
 
   @Summary
-    Brief description of the file.
+    PN5180 card reader source file.
 
   @Description
-    Describe the purpose of this file.
+    Define all the functions used for NFC card detection.
  */
 /* ************************************************************************** */
 
@@ -23,24 +26,27 @@
 
 /* This section lists the other files that are included in this file.
  */
+/* TODO:  Include other files here if needed. */
 #include "pn5180.h"
 #include "../mcc_generated_files/mcc.h"
 #include "../nxp_reader_config_files/phApp_Init.h"
 #include "../sam_reader_files/sam_interface.h"
 
-/* TODO:  Include other files here if needed. */
+/*******************************************************************************
+**   Macro Definitions
+*******************************************************************************/
 
-/* ATQA (Answer To Request type-A) */
+/* ATQA (Answer To Request for type-A) code */
 #define MIFARE_CLASSIC_1K_ATQA  0x0004
 #define MIFARE_CLASSIC_4K_ATQA  0x0002
 #define MIFARE_DESFIRE_ATQA  0x0344
-/* SAK (Select Acknowledge) */
+/* SAK (Select Acknowledge) code */
 #define MIFARE_CLASSIC_1K_SAK   0x08
 #define MIFARE_CLASSIC_4K_SAK   0x18
 #define MIFARE_DESFIRE_SAK  0x20
 
 /*******************************************************************************
-**   Global Variable Declaration
+**   Global Variable Declarations
 *******************************************************************************/
 
 /* HAL variables */
@@ -55,7 +61,33 @@ static uint8_t MifareClassicBlockData[16] = {0};
 /* The File Data read from the Mifare DESFire Card is stored here */
 static uint8_t MifareDesfireFileData[18] = {0};
 
+/*******************************************************************************
+**   Function Definitions
+*******************************************************************************/
 
+/** 
+  @Function
+    bool nfc_Init(void) 
+
+  @Summary
+    NFC reader library initialization
+
+  @Description
+    It initializes and configures the NFC reader library.
+    It must be invoked before the card detection function is called. 
+
+  @Precondition
+    SYSTEM_Initialize() function must be called beforehand.
+
+  @Parameters
+    None
+
+  @Returns
+    <ul>
+      <li>true   Indicates that the NFC reader library initialization process succeeded 
+      <li>false  Indicates that the NFC reader library initialization process failed
+    </ul>
+ */
 bool nfc_Init(void)
 {
     phStatus_t status = PH_ERR_SUCCESS;
@@ -97,10 +129,74 @@ bool nfc_Init(void)
     return true;
 }
 
+/** 
+  @Function
+    void pn5180_Sleep(void) 
 
+  @Summary
+    The PN5180 NFC card reader IC goes into sleep mode.
 
+  @Description
+    This function
+        1. Switch off the power supply for RF transmitter and TX antenna
+        2. Reset PN5180
+        3. Deselect PN5180
+        4. Disable SPI 1 port 
 
-/* Detect card once */
+  @Precondition
+    The PN5180 should be working before pn5180_Sleep() is called. 
+
+  @Parameters
+    None
+
+  @Returns
+    None
+ */
+void pn5180_Sleep(void)
+{
+    // Switch off the 5V power supply for PN5180 transmitter and loop antenna
+    EnableTXPowerSupply_SetLow();
+    // Keep the PN5180 in RESET mode
+    RF_RST_N_SetLow();
+    // Deselect the PN5180
+    RF_SS1_N_SetHigh();
+    // Disable the SPI1 port
+    SPI1CONbits.ON = 0;
+}
+
+/** 
+  @Function
+    bool detectCard(cardType *pDetectedCardTypeOut, uint8_t *pDetectedCardUidOut) 
+
+  @Summary
+    Detect NFC card once
+
+  @Description
+    This function can only detect the NFC card once.
+    The card type it can detect is MIFARE CLASSIC and MIFARE DESFIRE.
+    If a desired NFC card is detected, both card type and card UID will be output.
+
+  @Precondition
+    SYSTEM_Initialize() must be called at first and then 
+    nfc_Init() is called and returns true.
+    NOTE:
+    We only need to execute the SYSTEM_Initialize() and nfc_Init() once
+    if the PIC32MX MCU is in normal running mode.  
+
+  @Parameters
+    @param pDetectedCardTypeOut 
+            Pointer to a card type variable where the detected card type is output
+    
+    @param pDetectedCardUidOut
+            Pointer to a byte array where the detected card UID is output
+            NOTE: You had better use an array with 10 Bytes space                        
+
+  @Returns
+    <ul>
+      <li>true    Indicates that either a MIFARE CLASSIC card or a MIFARE DESFIRE card is detected
+      <li>false   Indicates that neither a MIFARE CLASSIC card nor a MIFARE DESFIRE card is detected 
+    </ul>
+ */
 bool detectCard(cardType *pDetectedCardTypeOut, uint8_t *pDetectedCardUidOut)
 {   
     phStatus_t  status = PH_ERR_SUCCESS;
@@ -233,9 +329,31 @@ bool detectCard(cardType *pDetectedCardTypeOut, uint8_t *pDetectedCardUidOut)
     }
 }
 
+/** 
+  @Function
+    void detectCardTest(bool detectLoopMode) 
 
+  @Summary
+    Card detection test function
 
-/* Customize your detection mode: detect only once or detect continously */
+  @Description
+    It can detect the NFC card only once or continuously.
+    This is used for the purpose of testing PN5180. 
+
+  @Precondition
+    SYSTEM_Initialize() must be called at first and then 
+    nfc_Init() is called and returns true.
+
+  @Parameters
+    @param detectLoopMode
+            It customizes the card detection loop mode: 
+              single detection
+              continuous detection 
+            You can assign DETECT_ONCE macro or DETECT_CONTINUOUS macro to it. 
+
+  @Returns
+    None
+ */
 void detectCardTest(bool detectLoopMode)
 {   
     phStatus_t  status = PH_ERR_SUCCESS;
@@ -402,6 +520,34 @@ void detectCardTest(bool detectLoopMode)
     }while(detectLoopMode);
 }
 
+/** 
+  @Function
+    bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDataOut) 
+
+  @Summary
+    MIFARE CLASSIC card authentication and block data readout 
+
+  @Description
+    It authenticates the MIFARE CLASSIC card with the provided KEY and 
+    outputs the 16-Bytes data in the block 4 of the card 
+    after a successful authentication.  
+
+  @Precondition
+    detectCard() function is called beforehand.
+
+  @Parameters
+    @param pKeyIn
+            Pointer to the 6-Bytes input KEY
+    
+    @param pBlockDataOut 
+            Pointer to a byte array where the 16-Bytes block data is output
+
+  @Returns
+    <ul>
+      <li>true   Indicates that card authentication and card data readout succeeded 
+      <li>false  Indicates that either card authentication or card data readout failed
+    </ul>
+ */
 bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDataOut)
 {
     if( (pKeyIn == NULL) || (pBlockDataOut == NULL) )
@@ -469,6 +615,31 @@ bool MifareClassic_AuthenticateCard_ReadBlock(uint8_t *pKeyIn, uint8_t *pBlockDa
     return true;
 }
 
+/** 
+  @Function
+    bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut) 
+
+  @Summary
+    MIFARE DESFIRE card authentication and file data readout 
+
+  @Description
+    It authenticates the MIFARE DESFIRE card with the Secure Access Module card 
+    and outputs the 18-Bytes data in the file of the card 
+    after a successful authentication.  
+
+  @Precondition
+    detectCard() function is called beforehand.
+
+  @Parameters
+    @param pFileDataOut
+            Pointer to a byte array where the 18-Bytes file data is output
+
+  @Returns
+    <ul>
+      <li>true    Indicates that card authentication and card data readout succeeded
+      <li>false   Indicates that either card authentication or card data readout failed
+    </ul>
+ */
 bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut)
 {
     if( (pFileDataOut == NULL) )
@@ -589,6 +760,29 @@ bool MifareDesfire_AuthenticateCard_ReadFile(uint8_t *pFileDataOut)
     return true;    
 }
 
+/** 
+  @Function
+    bool MifareDesfire_SAM_authentication(void)
+
+  @Summary
+    MIFARE DESFIRE card authentication with Secure Access Module (SAM)
+
+  @Description
+    It authenticates the MIFARE DESFIRE card with the SAM card reader TDA8029
+
+  @Precondition
+    detectCard() function is called beforehand.
+    tda8029_Init() function must be called to initialize the TDA8029 SAM reader beforehand.
+
+  @Parameters
+    None
+
+  @Returns
+    <ul>
+      <li>true   Indicates that MIFARE DESFIRE card authentication with SAM succeeded
+      <li>false  Indicates that MIFARE DESFIRE card authentication with SAM failed
+    </ul>
+ */
 bool MifareDesfire_SAM_authentication(void)
 {
     /* Store the temporary status code */

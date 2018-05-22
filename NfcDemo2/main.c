@@ -43,10 +43,22 @@
     TERMS.
 */
 
+/* DEBUG Macros */
+/* For the SAM reader test */
 //#define DEBUG_SAM
+/* For the PN5180 NFC card reader test */
 //#define DEBUG_PN5180
-#define SYSTEM_DEBUG
+/* For the external Flash memory test */
+//#define DEBUG_FLASH
+/* For the whole card reader system test */
+#define DEBUG_SYSTEM
 
+
+/* ************************************************************************** */
+/* ************************************************************************** */
+/* Section: Included Files                                                    */
+/* ************************************************************************** */
+/* ************************************************************************** */
 #include "mcc_generated_files/mcc.h"
 #include "sam_reader_files/sam_interface.h"
 #include "pn5180_files/pn5180.h"
@@ -57,20 +69,22 @@
  */
 int main(void)
 {
-//    breakpoint();
-    // initialize the device
-//    SYSTEM_Initialize();
-
 #ifdef DEBUG_SAM
+    //Initialize the device
+    SYSTEM_Initialize();
+    //Disable the change notice interrupt on port A
 	CNCONAbits.ON = 0;     
     sam_test();
 #endif
 
 #ifdef DEBUG_PN5180
+    //Initialize the device
+    SYSTEM_Initialize();
+    //Disable the change notice interrupt on port A
     CNCONAbits.ON = 0; 
-    tda8029_Init();
     if (nfc_Init() == true)
     {
+        tda8029_Init();
         detectCardTest(DETECT_CONTINUOUS);
     }
     else
@@ -78,8 +92,12 @@ int main(void)
         breakpoint();
     }
 #endif
-        
-#ifdef SYSTEM_DEBUG
+
+#ifdef DEBUG_FLASH
+    
+#endif
+    
+#ifdef DEBUG_SYSTEM
     systemRun();
 #endif 
     return -1;

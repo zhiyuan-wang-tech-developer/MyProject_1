@@ -102,7 +102,7 @@ void TMR3_Initialize (void)
 
 
 
-void __ISR(_TIMER_3_VECTOR, IPL3AUTO) _T3Interrupt (  )
+void __ISR(_TIMER_3_VECTOR, IPL7AUTO) _T3Interrupt (  )
 {
 
     //***User Area Begin

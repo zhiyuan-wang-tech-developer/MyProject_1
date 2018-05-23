@@ -4,6 +4,9 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <logicalFolder name="log" displayName="log" projectFiles="true">
+        <itemPath>log/log.h</itemPath>
+      </logicalFolder>
       <logicalFolder name="MCC Generated Files"
                      displayName="MCC Generated Files"
                      projectFiles="true">
@@ -42,6 +45,7 @@
         <itemPath>system_files/slave_spi.h</itemPath>
         <itemPath>system_files/slave_spi_fifo.h</itemPath>
         <itemPath>system_files/timer.h</itemPath>
+        <itemPath>system_files/spi_flash.h</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
@@ -51,6 +55,9 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <logicalFolder name="log" displayName="log" projectFiles="true">
+        <itemPath>log/log.c</itemPath>
+      </logicalFolder>
       <logicalFolder name="MCC Generated Files"
                      displayName="MCC Generated Files"
                      projectFiles="true">
@@ -8749,6 +8756,7 @@
         <itemPath>system_files/slave_spi.c</itemPath>
         <itemPath>system_files/slave_spi_fifo.c</itemPath>
         <itemPath>system_files/timer.c</itemPath>
+        <itemPath>system_files/spi_flash.c</itemPath>
       </logicalFolder>
       <itemPath>main_nfcdemo1.c</itemPath>
       <itemPath>main.c</itemPath>
@@ -8772,7 +8780,7 @@
         <targetDevice>PIC32MX150F128D</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>ICD3PlatformTool</platformTool>
+        <platformTool>Simulator</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>2.05</languageToolchainVersion>
         <platform>3</platform>
@@ -8968,7 +8976,6 @@
         <property key="UART2" value="true"/>
         <property key="USB" value="true"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
-        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="false"/>
@@ -9011,7 +9018,7 @@
         <property key="oscillator.rcfrequency" value="250"/>
         <property key="oscillator.rcfrequencyunit" value="Kilo"/>
         <property key="periphADC1.altscl" value="false"/>
-        <property key="periphADC1.minTacq" value=""/>
+        <property key="periphADC1.minTacq" value="132"/>
         <property key="periphADC1.tacqunits" value="microseconds"/>
         <property key="periphADC2.altscl" value="false"/>
         <property key="periphADC2.minTacq" value=""/>

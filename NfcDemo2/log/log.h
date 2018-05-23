@@ -2,24 +2,31 @@
 /** Descriptive File Name
 
   @Author
+    Thijs
+
+  @Created on 
+    2018-05-18, 15:18 
+
+  @Modifier
     Zhiyuan Wang
 
-  @Created on
-    2018-05-22 
-
+  @Modified on
+    2018-05-23
+ 
   @File Name
-    spi_flash.h
+    log.h
 
   @Summary
-    External Flash memory SST25VF080B SPI driver header
+    log record header file
 
   @Description
-    This file is the header file for the flash memory SST25VF080B driver.
+    string log record for the purpose of debugging
  */
 /* ************************************************************************** */
 
-#ifndef SPI_FLASH_H    /* Guard against multiple inclusion */
-#define SPI_FLASH_H
+#ifndef LOG_H    /* Guard against multiple inclusion */
+#define LOG_H
+
 
 /* ************************************************************************** */
 /* ************************************************************************** */
@@ -30,35 +37,38 @@
 /* This section lists the other files that are included in this file.
  */
 /* TODO:  Include other files here if needed. */
-#include "../mcc_generated_files/mcc.h"
-#include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <string.h>
 
-
+#define LOG_ENABLE
 
 /* Provide C++ Compatibility */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-/* ************************************************************************** */
-/* ************************************************************************** */
-/* Section: Constants                                                         */
-/* ************************************************************************** */
-/* ************************************************************************** */
-
-
-
-
+/*******************************************************************************
+**   Function Declarations for Log Record
+*******************************************************************************/
+int _logf(const char *format, ...);
+void clearLogInfo(void);   
+    
 /* Provide C++ Compatibility */
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* SPI_FLASH_H */
+#ifdef LOG_ENABLE
+#define MAX_LOG_BUFFER_SIZE     512
+#define logf(format, ...)       _logf(format, ## __VA_ARGS__)
+#else
+#define MAX_LOG_BUFFER_SIZE     0
+#define logf(format, ...)      (0)
+#endif
+
+#endif /* LOG_H */
 
 /* *****************************************************************************
  End of File

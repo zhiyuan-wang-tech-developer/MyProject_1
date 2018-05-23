@@ -49,9 +49,9 @@
 /* For the PN5180 NFC card reader test */
 //#define DEBUG_PN5180
 /* For the external Flash memory test */
-//#define DEBUG_FLASH
+#define DEBUG_FLASH
 /* For the whole card reader system test */
-#define DEBUG_SYSTEM
+//#define DEBUG_SYSTEM
 
 
 /* ************************************************************************** */
@@ -63,6 +63,7 @@
 #include "sam_reader_files/sam_interface.h"
 #include "pn5180_files/pn5180.h"
 #include "system_files/system.h"
+#include "log/log.h"
 
 /*
                          Main application
@@ -94,7 +95,10 @@ int main(void)
 #endif
 
 #ifdef DEBUG_FLASH
-    
+    //Initialize the device
+    SYSTEM_Initialize();
+    clearLogInfo();
+    logf("Start SPI FLASH Debugging\r\n"); 
 #endif
     
 #ifdef DEBUG_SYSTEM

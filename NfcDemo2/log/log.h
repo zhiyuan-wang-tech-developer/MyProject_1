@@ -52,13 +52,9 @@ extern "C" {
 /*******************************************************************************
 **   Function Declarations for Log Record
 *******************************************************************************/
+
 int _logf(const char *format, ...);
 void clearLogInfo(void);   
-    
-/* Provide C++ Compatibility */
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef LOG_ENABLE
 #define MAX_LOG_BUFFER_SIZE     512
@@ -66,6 +62,11 @@ void clearLogInfo(void);
 #else
 #define MAX_LOG_BUFFER_SIZE     0
 #define logf(format, ...)      (0)
+#endif
+
+/* Provide C++ Compatibility */
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* LOG_H */

@@ -322,7 +322,11 @@ void nfc_findCards(void)
 
 //    flagFindCards = false;
 //    flagFindCardsDone = true;
-
+    /* Switch off the RF Field so that the card is not induced any more after detected
+     * It can effectively reduce the possibility of the card authentication failure
+     */
+    phhalHw_FieldOff(pHal);
+    
     //Check if the card is one of the types we want to find.
     if( currentCardType == cardUnknown )
     {

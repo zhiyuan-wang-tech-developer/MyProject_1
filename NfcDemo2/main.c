@@ -97,8 +97,11 @@ int main(void)
 #ifdef DEBUG_FLASH
     //Initialize the device
     SYSTEM_Initialize();
-    clearLogInfo();
-    logf("Start SPI FLASH Debugging\r\n"); 
+    //Disable the change notice interrupt on port A
+    CNCONAbits.ON = 0; 
+//    clearLogInfo();
+//    logf("Start SPI FLASH Debugging\r\n");
+    spi_flash_test();
 #endif
     
 #ifdef DEBUG_SYSTEM

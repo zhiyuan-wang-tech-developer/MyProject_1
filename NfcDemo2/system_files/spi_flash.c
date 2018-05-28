@@ -60,6 +60,8 @@
 #define AAI     0x40    // Mask for Status Register AAI (Auto Address Increment Programming) status bit
 #define BPL     0x80    // Mask for Status Register BPL (Block Protection Lockdown / BPx block protection bit read-only) status bit
 
+/* SST25VF040B JEDEC ID */
+#define SST25VF040B_JEDEC_ID            0x00BF258D
 /* SST25VF080B JEDEC ID */
 #define SST25VF080B_JEDEC_ID            0x00BF258E
 
@@ -90,6 +92,7 @@ uint8_t spi_flash_Read_ID(uint8_t ID_address);
 uint32_t spi_flash_Read_Jedec_ID(void);
 uint8_t spi_flash_Read_Byte(uint32_t address);
 bool spi_flash_Read_Bytes(uint32_t address, uint32_t num_bytes_to_read, uint8_t *pOutputBuffer, uint32_t outputBufferSize);
+void spi_flash_unlock_block_protection(void);
 void spi_flash_Write_Byte(uint32_t address, uint8_t byteToWrite);
 void spi_flash_Write_Bytes_Start_AutoAddressInc(uint32_t address, uint8_t byte1ToWrite, uint8_t byte2ToWrite);
 void spi_flash_Write_Bytes_Follow_AutoAddressInc(uint8_t byte1ToWrite, uint8_t byte2ToWrite);
@@ -101,29 +104,87 @@ void spi_flash_Erase_32KB_Block(uint32_t address);
 void spi_flash_Erase_64KB_Block(uint32_t address);
 void spi_flash_Busy_Wait(void);
 bool spi_flash_is_Write_Enabled(void);
+bool spi_flash_is_SST25VF040B(void);
 bool spi_flash_is_SST25VF080B(void);
-void spi_flash_test(void);
+void spi_flash_Test(void);
 
 
 /*******************************************************************************
 **   Function Definitions
 *******************************************************************************/
+
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Chip_Enable                                           */
+/*																		*/
+/* Description:                                                         */
+/*      This function drives the flash chip enable line to LOW so that 	*/
+/*      the flash memory chip is selected.								*/
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Chip_Enable(void)
 {
     FLASH_SS_N_SetLow();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Chip_Disable                                          */			
+/*                                                                      */
+/* Description:                                                         */ 
+/*      This function sets the flash chip enable line to HIGH so that	*/
+/*      the flash memory chip is released.                              */
+/*																		*/
+/* Parameter:                                                           */
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Chip_Disable(void)
 {
     FLASH_SS_N_SetHigh();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Send_Byte												*/
+/*                                                                      */
+/* Description:                                                      	*/
+/*      This function sends a byte (LSB first) to the flash chip        */
+/*      via MOSI line.                                                  */
+/*																		*/
+/* Parameter:															*/
+/*		byteToSend: a byte to send										*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Send_Byte(uint8_t byteToSend)
 {
     uint8_t rxDummy = 0;
     rxDummy = SPI1_Exchange8bit(byteToSend);
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Get_Byte												*/
+/*																		*/
+/* Description:                                                         */
+/* 		This function receives a byte (LSB first) from the flash chip	*/
+/*      via MISO line.                                                  */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		a received byte													*/
+/************************************************************************/
 uint8_t spi_flash_Get_Byte(void)
 {
     uint8_t rxData = 0;
@@ -132,6 +193,20 @@ uint8_t spi_flash_Get_Byte(void)
     return rxData;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Read_Status_Register									*/
+/*																		*/  
+/* Description:                                                         */
+/* 		This function reads out the status register and returns 		*/
+/*		its status.														*/
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		status byte														*/
+/************************************************************************/
 uint8_t spi_flash_Read_Status_Register(void)
 {
     uint8_t status = 0;
@@ -146,6 +221,19 @@ uint8_t spi_flash_Read_Status_Register(void)
     return status;    
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Enable_Write_Status_Register                          */
+/*																		*/
+/* Description:                                                         */
+/*      This function makes the status register write-enabled.          */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Enable_Write_Status_Register(void)
 {
     /* Enable flash device */
@@ -156,6 +244,19 @@ void spi_flash_Enable_Write_Status_Register(void)
     spi_flash_Chip_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Write_Status_Register                                 */
+/*																		*/
+/* Description:                                                         */
+/*      This function writes a byte to the status register.             */
+/*																		*/
+/* Parameter:															*/
+/*		byteToWrite: a byte to be written								*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Status_Register(uint8_t byteToWrite)
 {
     /* Enable flash device */
@@ -169,6 +270,21 @@ void spi_flash_Write_Status_Register(uint8_t byteToWrite)
     spi_flash_Chip_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Write_Enable                                          */
+/*                                                                      */
+/* Description:                                                         */
+/*      This function sets the Write Enable Latch (WEL) bit in the      */
+/*      status register. It is used before data writing and data        */
+/*      erasing.                                                        */
+/*                                                                      */
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Enable(void)
 {
     /* Enable flash device */
@@ -179,6 +295,21 @@ void spi_flash_Write_Enable(void)
     spi_flash_Chip_Disable();
 }
 
+/************************************************************************/
+/* Function:        													*/
+/*      spi_flash_Write_Disable											*/
+/*																		*/
+/* Description:                                                         */
+/*      This function clears the Write Enable Latch (WEL) bit in the    */
+/* 		status register. It is used after data writing and data         */
+/*      erasing.                                                        */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Disable(void)
 {
     /* Enable flash device */
@@ -189,6 +320,20 @@ void spi_flash_Write_Disable(void)
     spi_flash_Chip_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_MISO_Busy_Output_Enable                               */
+/*																		*/
+/* Description:                                                         */
+/* 		This function enables the serial output (SO) pin to output      */
+/*      READY/#BUSY status signal during AAI programming.               */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_MISO_Busy_Output_Enable(void)
 {
     /* Enable flash device */
@@ -199,6 +344,20 @@ void spi_flash_MISO_Busy_Output_Enable(void)
     spi_flash_Chip_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_MISO_Busy_Output_Disable								*/
+/*																		*/
+/* Description:                                                         */
+/* 		This function disables the serial output (SO) pin to output     */
+/*      READY/#BUSY status signal during AAI programming.               */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_MISO_Busy_Output_Disable(void)
 {
     /* Enable flash device */
@@ -209,6 +368,23 @@ void spi_flash_MISO_Busy_Output_Disable(void)
     spi_flash_Chip_Disable();    
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_MISO_Busy_Output_Polling								*/
+/*                                                                      */
+/* Description:                                                         */
+/*      This function polls for the MISO line during AAI programming    */
+/* 		and waits for the MISO line to transition from LOW (#BUSY) to	*/
+/*      HIGH (READY) which will indicate the AAI programming is         */
+/*      complete. The function spi_flash_MISO_Busy_Output_Enable must   */
+/*      be called first.                                                */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_MISO_Busy_Output_Polling(void)
 {
     /* Enable flash device */
@@ -219,6 +395,22 @@ void spi_flash_MISO_Busy_Output_Polling(void)
     spi_flash_Chip_Disable(); 
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Read_ID												*/
+/*                                                                      */
+/* Description:                                                         */
+/*      This function reads manufacturer's ID or device's ID from       */
+/*      the flash memory chip. The given ID address determines whether  */
+/*      the manufacturer's ID or the device's ID is output.             */
+/*																		*/
+/* Parameter:															*/
+/*		ID_address: 0 or 1												*/
+/*																		*/
+/* Return:																*/
+/*		The manufacturer's ID byte if the ID_address = 0    			*/
+/*		The device's ID byte if the ID_address = 1          			*/
+/************************************************************************/
 uint8_t spi_flash_Read_ID(uint8_t ID_address)
 {
     uint8_t byteID = 0;
@@ -240,6 +432,21 @@ uint8_t spi_flash_Read_ID(uint8_t ID_address)
     return byteID;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Read_Jedec_ID                                         */
+/*																		*/
+/* Description:                                                         */
+/*      This function reads manufacturer's ID (0xBF), memory type       */ 
+/*      (0x25), device's ID from the flash chip.                        */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		double-word Jedec ID = 0x00BF258D for SST25VF040B				*/
+/*      double-word Jedec ID = 0x00BF258E for SST25VF080B               */
+/************************************************************************/
 uint32_t spi_flash_Read_Jedec_ID(void)
 {
     uint32_t dwJedecID = 0;
@@ -256,6 +463,20 @@ uint32_t spi_flash_Read_Jedec_ID(void)
     return dwJedecID;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Read_Byte                                             */
+/*																		*/
+/* Description:                                                         */
+/* 		This function reads one byte at the given address in the        */
+/*      flash memory chip.                                              */
+/*																		*/
+/* Parameter:															*/
+/*		address: the byte address (0x00000000 ~ 0x000FFFFF)				*/
+/*																		*/
+/* Return:																*/
+/*		byte to be read at the address                                  */
+/************************************************************************/
 uint8_t spi_flash_Read_Byte(uint32_t address)
 {
     uint8_t byteRead = 0;
@@ -277,6 +498,26 @@ uint8_t spi_flash_Read_Byte(uint32_t address)
     return byteRead;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Read_Bytes                                            */
+/*																		*/
+/* Description:                                                         */
+/* 		This function reads multiple bytes from the given initial       */
+/*      address in the flash memory chip.                               */
+/*																		*/
+/* Parameter:															*/
+/*		address: the initial address (0x00000000 ~ 0x000FFFFF)          */
+/*      num_bytes_to_read: the number of bytes to read                  */
+/*      pOutputBuffer: pointer to the output buffer where the read      */
+/*                     bytes are stored                                 */
+/*      outputBufferSize: It must be greater than or equal to           */  
+/*                        the number of bytes to read                   */
+/*																		*/
+/* Return:																*/
+/*		True: reading multiple bytes is successful  					*/
+/*      False: reading multiple bytes is failed                         */
+/************************************************************************/
 bool spi_flash_Read_Bytes(uint32_t address, uint32_t num_bytes_to_read, uint8_t *pOutputBuffer, uint32_t outputBufferSize)
 {
     /* Security Check */
@@ -309,9 +550,52 @@ bool spi_flash_Read_Bytes(uint32_t address, uint32_t num_bytes_to_read, uint8_t 
     return true;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_unlock_block_protection                               */
+/*																		*/
+/* Description:                                                         */
+/* 		This function clears the block protection bits (BP3 ~ BP0)  	*/
+/*      in the status register so that all blocks are unlocked.         */
+/*      It must be called before any data writing or data erasing       */
+/*      operation.                                                      */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
+void spi_flash_unlock_block_protection(void)
+{
+    /* When the SPI flash is powered up, BP2 ~ BP0 are '1 1 1' at default
+     * All blocks are write-protected
+     * We have to unlock the block protection before any data writing or
+     * data erasing
+     */
+    spi_flash_Enable_Write_Status_Register();
+    /* Clear BP2 ~ BP0 */
+    spi_flash_Write_Status_Register(0);
+}
+
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Write_Byte                                            */
+/*																		*/
+/* Description:                                                         */
+/* 		This function writes a byte at the given address into the flash */
+/*      memory.                                                         */
+/*																		*/
+/* Parameter:															*/
+/*		address: the memory address where the byte is written   		*/
+/*      byteToWrite: a byte to write                                    */
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Byte(uint32_t address, uint8_t byteToWrite)
 {
-    /* Enable Write Operation */
+    /* Enable Write Operation at first */
     spi_flash_Write_Enable();    
     /* Enable flash device */
     spi_flash_Chip_Enable();
@@ -328,8 +612,30 @@ void spi_flash_Write_Byte(uint32_t address, uint8_t byteToWrite)
     spi_flash_Send_Byte(byteToWrite);
     /* Disable flash device */
     spi_flash_Chip_Disable();
+    /* Wait until the internal write operation completes */
+    spi_flash_Busy_Wait();
+    /* Disable Write Operation at end */
+    spi_flash_Write_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Write_Bytes_Start_AutoAddressInc						*/
+/*                                                                      */
+/* Description:                                                         */
+/*      This function starts the Auto Address Increment (AAI) Mode to   */
+/* 		write a word (two bytes) into the flash chip. It should be      */
+/*      followed by the spi_flash_Write_Bytes_Follow_AutoAddressInc()   */
+/*      ended by the spi_flash_Write_Bytes_Stop_AutoAddressInc().       */
+/*																		*/
+/* Parameter:															*/
+/*		address: the initial address where AAI programming mode starts  */
+/* byte1ToWrite: 1st byte to be written at address [A23~A1] with A0 = 0 */
+/* byte2ToWrite: 2nd byte to be written at address [A23~A1] with A0 = 1 */
+/* 																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Bytes_Start_AutoAddressInc(uint32_t address, uint8_t byte1ToWrite, uint8_t byte2ToWrite)
 {
     /* Enable READY/BUSY# output on MISO line during AAI mode */
@@ -357,6 +663,23 @@ void spi_flash_Write_Bytes_Start_AutoAddressInc(uint32_t address, uint8_t byte1T
     spi_flash_MISO_Busy_Output_Polling();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*		spi_flash_Write_Bytes_Follow_AutoAddressInc 					*/
+/*                                                                      */
+/* Description:                                                         */
+/*      This function continues the Auto Address Increment (AAI) Mode   */
+/*      to write a word (two bytes) into the flash chip. It follows     */
+/*      spi_flash_Write_Bytes_Start_AutoAddressInc and is ended by      */
+/*      spi_flash_Write_Bytes_Stop_AutoAddressInc().                    */
+/*																		*/
+/* Parameter:															*/
+/* byte1ToWrite: 1st byte to be written at address [A23~A1] with A0 = 0 */
+/* byte2ToWrite: 2nd byte to be written at address [A23~A1] with A0 = 1 */
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Bytes_Follow_AutoAddressInc(uint8_t byte1ToWrite, uint8_t byte2ToWrite)
 {
     /* Enable flash device */
@@ -373,6 +696,19 @@ void spi_flash_Write_Bytes_Follow_AutoAddressInc(uint8_t byte1ToWrite, uint8_t b
     spi_flash_MISO_Busy_Output_Polling();    
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Write_Bytes_Stop_AutoAddressInc                       */
+/*																		*/
+/* Description:                                                         */
+/* 		This function stops the Auto Address Increment (AAI) Mode.    	*/
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Write_Bytes_Stop_AutoAddressInc(void)
 {
     /* Write Disable followed by MISO Busy Output Disable to exit Auto Address Increment Mode */
@@ -380,6 +716,27 @@ void spi_flash_Write_Bytes_Stop_AutoAddressInc(void)
     spi_flash_MISO_Busy_Output_Disable();
 }
 
+/************************************************************************/
+/* Function:                            								*/
+/*		spi_flash_Write_Bytes											*/
+/*                                                                      */
+/* Description:                                                         */
+/* 		This function writes multiple bytes from the initial address    */
+/*      into the flash chip with Auto Address Increment (AAI) Mode.     */
+/*																		*/
+/* Parameter:															*/
+/*		address: The initial address where the 1st byte is written.		*/
+/*               It must be in the range of 0x00000000 ~ 0x000FFFFF.    */
+/*      num_bytes_to_write: The number of bytes to be written           */
+/*      pInputBuffer: pointer to the input buffer where the bytes       */
+/*                    to be written are stored                          */
+/*      inputBufferSize: It must be greater than or equal to            */  
+/*                       the number of bytes to write.                  */
+/*																		*/
+/* Return:																*/
+/*		True: writing multiple bytes is successful  					*/
+/*      False: writing multiple bytes is failed                         */
+/************************************************************************/
 bool spi_flash_Write_Bytes(uint32_t address, uint32_t num_bytes_to_write, uint8_t *pInputBuffer, uint32_t inputBufferSize)
 {
     /* Security Check */
@@ -392,28 +749,38 @@ bool spi_flash_Write_Bytes(uint32_t address, uint32_t num_bytes_to_write, uint8_
     /* The input buffer should be large enough to hold the bytes to write */
     if( num_bytes_to_write > inputBufferSize ) return false;
     
-    /* The number of bytes to write should be even */
+    uint8_t firstByte = 0;
+    uint8_t lastByte = 0;
+    uint8_t checkByte = 0;
+    /* The number of bytes to write should be even 
+     * The initial address should be even 
+     */
     /* If it isn't, the first or last byte needs to be written separately */
     bool writeLastByte = false;
-    if(num_bytes_to_write & 1){
-        //Odd number of bytes to write
-        num_bytes_to_write--;
-        if( address & 1 ){
-            //Odd address, write first byte separately
-            
-            //AAI programming is done by word
-            //write the first byte normally, do the rest by AAI programming        
-            uint8_t firstByte = pInputBuffer[0];
-            spi_flash_Write_Byte(address, firstByte);
-            spi_flash_Busy_Wait();
+    // In case of odd number of bytes to write
+    if( num_bytes_to_write & 1 )
+    {
 
-            uint8_t check_byte = spi_flash_Read_Byte(address);
-            if( check_byte != firstByte ){
+        num_bytes_to_write--;
+        // In case of odd initial address, write first byte separately
+        if( address & 1 )
+        {          
+            // AAI programming is done by word
+            // Write the first byte normally, do the rest by AAI programming        
+            firstByte = pInputBuffer[0];
+            // Write the first byte at the odd initial address
+            spi_flash_Write_Byte(address, firstByte);
+            // Check if the first byte is written correctly
+            checkByte = spi_flash_Read_Byte(address);
+            if( checkByte != firstByte ){
                 breakpoint();
             }
             ++pInputBuffer;
             ++address;
-        }else{
+        }
+        else
+        {
+            // In case of even initial address, write last byte separately
             writeLastByte = true;
         }
     }
@@ -426,41 +793,74 @@ bool spi_flash_Write_Bytes(uint32_t address, uint32_t num_bytes_to_write, uint8_
         spi_flash_Write_Bytes_Follow_AutoAddressInc(pInputBuffer[i], pInputBuffer[i+1]);
     }
     spi_flash_Write_Bytes_Stop_AutoAddressInc();
-    /* Writing multiple bytes is successful */
     
     if( writeLastByte ){
-        spi_flash_Busy_Wait();
-        uint8_t lastByte = pInputBuffer[num_bytes_to_write];
+        lastByte = pInputBuffer[num_bytes_to_write];
         address += num_bytes_to_write;
         
         spi_flash_Write_Byte(address, lastByte);
-        spi_flash_Busy_Wait();
 
-        uint8_t check_byte = spi_flash_Read_Byte(address);
-        if( check_byte != lastByte ){
+        checkByte = spi_flash_Read_Byte(address);
+        if( checkByte != lastByte ){
             breakpoint();
         }
     }
     
-    
+//    if( (address & 1) && (num_bytes_to_write &1) )
+//    {
+//        
+//    }
+    /* Writing multiple bytes is successful */    
     return true;
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Erase_All                                             */
+/*																		*/
+/* Description:                                                         */
+/* 		This function erases the entire flash chip. The block           */
+/*      protection must be unlocked first.                              */
+/*																		*/
+/* Parameter:                                                           */
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Erase_All(void)
 {
+    /* Enable Write Operation at first */    
     spi_flash_Write_Enable();
     /* Enable flash device */
     spi_flash_Chip_Enable();
     /* Send Erase All Chip Command 0x60 */
     spi_flash_Send_Byte(ERASE_ALL);
     /* Disable flash device */
-    spi_flash_Chip_Disable();    
+    spi_flash_Chip_Disable();
+    /* Wait until the internal write operation completes */
+    spi_flash_Busy_Wait();
+    /* Disable Write Operation at end */
+    spi_flash_Write_Disable();    
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Erase_4KB_Sector                                      */
+/*																		*/
+/* Description:                                                         */
+/* 		This function erases 4KB sector which the address refers to     */
+/*																		*/
+/* Parameter:															*/
+/*		address: the address of the sector                              */
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Erase_4KB_Sector(uint32_t address)
-{  
+{
+    /* Enable Write Operation at first */    
     spi_flash_Write_Enable();
-    
     /* Enable flash device */
     spi_flash_Chip_Enable();
     /* Send Erase 4KB Sector Command 0x20 */
@@ -474,12 +874,28 @@ void spi_flash_Erase_4KB_Sector(uint32_t address)
     spi_flash_Send_Byte( (address & 0x000000FF) );    
     /* Disable flash device */
     spi_flash_Chip_Disable();     
-    
+    /* Wait until the internal write operation completes */
     spi_flash_Busy_Wait();
+    /* Disable Write Operation at end */
+    spi_flash_Write_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Erase_32KB_Block                                      */
+/*																		*/
+/* Description:                                                         */
+/* 		This function erases 32KB block which the address refers to     */
+/*																		*/
+/* Parameter:															*/
+/*		address: the address of the block								*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Erase_32KB_Block(uint32_t address)
 {
+    /* Enable Write Operation at first */
     spi_flash_Write_Enable();
     /* Enable flash device */
     spi_flash_Chip_Enable();
@@ -493,11 +909,29 @@ void spi_flash_Erase_32KB_Block(uint32_t address)
     /* Send low byte address */
     spi_flash_Send_Byte( (address & 0x000000FF) );    
     /* Disable flash device */
-    spi_flash_Chip_Disable();     
+    spi_flash_Chip_Disable();
+    /* Wait until the internal write operation completes */
+    spi_flash_Busy_Wait();
+    /* Disable Write Operation at end */
+    spi_flash_Write_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Erase_64KB_Block                                      */
+/*																		*/
+/* Description:                                                         */
+/*      This function erases 64KB block which the address refers to     */
+/*																		*/
+/* Parameter:															*/
+/*		address: the address of the block								*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Erase_64KB_Block(uint32_t address)
 {
+    /* Enable Write Operation at first */
     spi_flash_Write_Enable();
     /* Enable flash device */
     spi_flash_Chip_Enable();
@@ -511,15 +945,51 @@ void spi_flash_Erase_64KB_Block(uint32_t address)
     /* Send low byte address */
     spi_flash_Send_Byte( (address & 0x000000FF) );    
     /* Disable flash device */
-    spi_flash_Chip_Disable();     
+    spi_flash_Chip_Disable();
+    /* Wait until the internal write operation completes */
+    spi_flash_Busy_Wait();
+    /* Disable Write Operation at end */
+    spi_flash_Write_Disable();
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Busy_Wait                                             */
+/*																		*/
+/* Description:                                                         */
+/* 		This function waits until the flash chip is no longer busy.		*/
+/*      It can be used in writing functions and erasing functions to    */
+/*      wait until the writing operation or the reading operation is    */
+/*      complete.                                                       */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
 void spi_flash_Busy_Wait(void)
 {
     /* wait until the chip is not busy */
     while( (spi_flash_Read_Status_Register() & 0x03) == 0x03 );
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_is_Write_Enabled                                      */
+/*																		*/
+/* Description:                                                         */
+/* 		This function checks if the Write-Enable-Latch (WEL) bit in the */
+/*      status register is set or not before writing or erasing         */
+/*      operation.                                                      */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		True: Flash is write-enabled now.								*/
+/*      False: Flash is not write-enabled.                              */
+/************************************************************************/
 bool spi_flash_is_Write_Enabled(void)
 {
     uint8_t status = 0;
@@ -538,6 +1008,52 @@ bool spi_flash_is_Write_Enabled(void)
     }
 }
 
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_is_SST25VF040B                                        */
+/*																		*/
+/* Description:                                                         */
+/* 		This function checks the Jedec ID to determine whether the      */
+/*		flash chip is SST25VF040B type. 								*/
+/*                                                                      */
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*      True: The chip is SST25VF040B.									*/
+/*      False: The chip is not SST25VF040B.								*/
+/************************************************************************/
+bool spi_flash_is_SST25VF040B(void)
+{
+    uint32_t Jedec_ID;
+    Jedec_ID = spi_flash_Read_Jedec_ID();
+    if( Jedec_ID == SST25VF040B_JEDEC_ID )
+    {
+        /* Chip is SST25VF040B */
+        return true;
+    }
+    else
+    {
+        /* Chip is not SST25VF040B */
+        return false;
+    }
+}
+
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_is_SST25VF080B                                        */
+/*																		*/
+/* Description:                                                         */
+/* 		This function checks the Jedec ID to determine whether the 		*/
+/*		flash chip is SST25VF080B type. 								*/
+/*                                                                      */
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*      True: The chip is SST25VF080B.									*/
+/*      False: The chip is not SST25VF080B.								*/
+/************************************************************************/
 bool spi_flash_is_SST25VF080B(void)
 {
     uint32_t Jedec_ID;
@@ -554,110 +1070,115 @@ bool spi_flash_is_SST25VF080B(void)
     }
 }
 
-void spi_flash_test(void)
+/************************************************************************/
+/* Function:                                                            */
+/*      spi_flash_Test                                                  */
+/*																		*/
+/* Description:                                                         */
+/* 		This function performs the functionality test of the flash chip */
+/*      and provides examples for the usage of its API functions.       */
+/*																		*/
+/* Parameter:															*/
+/*		None															*/
+/*																		*/
+/* Return:																*/
+/*		None															*/
+/************************************************************************/
+void spi_flash_Test(void)
 {
-    if(spi_flash_is_SST25VF080B() == false)
+    if(spi_flash_is_SST25VF040B() == false)
         breakpoint();
     
     uint8_t manufactureID = 0;
-    manufactureID = spi_flash_Read_ID(0);
+    manufactureID = spi_flash_Read_ID(0);   //0xBF
     
     uint8_t deviceID = 0;
-    deviceID = spi_flash_Read_ID(1);
+    deviceID = spi_flash_Read_ID(1);    //0x8D    
     
-    uint8_t data_1 = 'h';
+    uint8_t writeData_1 = 'h';
     uint32_t address_1 = 15;
     
-    uint8_t data_2 = 'i';
+    uint8_t writeData_2 = 'i';
     uint32_t address_2 = 16;
+
+    // Unlock block protection
+    spi_flash_unlock_block_protection();
     
-    
-    
-    //Disable block protection
-    spi_flash_Enable_Write_Status_Register();
-    spi_flash_Write_Status_Register(0);    
-    
-    //Check if block protection is cleared
+    // Check if block protection is unlocked
     uint8_t status = spi_flash_Read_Status_Register();
-    if( status & 0b111100){
-        //BP3-0 set
+    // Check whether the BP3, BP2, BP1, BP0 are set or not
+    if( status & 0b00111100 )
+    {
+        // BP3-0 are set
         breakpoint();
     }
     
-    spi_flash_Write_Byte(address_1, data_1);
-    spi_flash_Busy_Wait();
-    spi_flash_Write_Byte(address_2, data_2);
-    spi_flash_Busy_Wait();
+    // Test one data byte writing
+    spi_flash_Write_Byte(address_1, writeData_1);
+    spi_flash_Write_Byte(address_2, writeData_2);
     
+    // Test one data byte reading
     uint8_t readData_1 = 0;
-    uint8_t readData_2 = 0;
-    
+    uint8_t readData_2 = 0;    
     readData_1 = spi_flash_Read_Byte(address_1);
     readData_2 = spi_flash_Read_Byte(address_2);
-
-    if( data_1 != readData_1 ){
+    if( writeData_1 != readData_1 ){
         breakpoint();
     }
-    if( data_2 != readData_2 ){
+    if( writeData_2 != readData_2 ){
         breakpoint();
     }
     
-    
-    
-    uint8_t writeData[30] = "Hello Thijs Hello Zhiyuan";
+    // Test multiple data bytes writing
+    uint8_t writeDataBlock1[30] = "Hello Thijs Hello Zhiyuan";
     uint32_t address_3 = 50;
-    size_t dataLength = strlen(writeData);
-
+    size_t dataBlockLength1 = strlen(writeDataBlock1);
+    // Erase the sector first
     spi_flash_Erase_4KB_Sector(address_3);
-
+    // Check whether the sector is erased or not
     uint8_t check_byte = spi_flash_Read_Byte(address_3);
     if( check_byte != 0xFF ){
         breakpoint();
     }
-    
-    
-    
-    if( spi_flash_Write_Bytes(address_3, dataLength, writeData, sizeof(writeData)) == false )
+    // Write multiple data bytes to the even address   
+    if( spi_flash_Write_Bytes(address_3, dataBlockLength1, writeDataBlock1, sizeof(writeDataBlock1)) == false )
         breakpoint();
     
-    uint8_t readData[100] = {0};
-    if( spi_flash_Read_Bytes(0, 80, readData, sizeof(readData)) == false )
+    // Test multiple data bytes reading
+    uint8_t readDataBlock1[100] = {0};
+    if( spi_flash_Read_Bytes(0, 80, readDataBlock1, sizeof(readDataBlock1)) == false )
         breakpoint();
     
-    if( memcmp(writeData, &readData[address_3], dataLength) ){
+    if( memcmp(writeDataBlock1, &readDataBlock1[address_3], dataBlockLength1) ){
         breakpoint();
     }
     
-
     uint32_t address_4 = 4096 + 11; //odd address in next erase sector
-    uint32_t address_5 = 4096 + 0;  //first address in next erase sector
+    uint32_t address_5 = 4096;      //first address in next erase sector
     uint32_t offset = address_4 - address_5;
-    
-    
+        
     spi_flash_Erase_4KB_Sector(address_4);
     check_byte = spi_flash_Read_Byte(address_4);
     if( check_byte != 0xFF ){
         breakpoint();
     }
-    
-    
-    uint8_t writeData2[30] = "Hello Thijs Hello Zhiyuan";
-    size_t dataLength2 = strlen(writeData2);
 
-    if( spi_flash_Write_Bytes(address_4, dataLength2, writeData2, sizeof(writeData2)) == false )
+    // Write multiple data bytes to the odd address     
+    uint8_t writeDataBlock2[30] = "Flash memory is being tested";
+    size_t dataBlockLength2 = strlen(writeDataBlock2);
+    if( spi_flash_Write_Bytes(address_4, dataBlockLength2, writeDataBlock2, sizeof(writeDataBlock2)) == false )
+        breakpoint();
+
+    // Test multiple data bytes reading    
+    uint8_t readDataBlock2[100] = {0};
+    if( spi_flash_Read_Bytes(address_5, 80, readDataBlock2, sizeof(readDataBlock2)) == false )
         breakpoint();
     
-    uint8_t readData2[100] = {0};
-    if( spi_flash_Read_Bytes(address_5, 80, readData2, sizeof(readData2)) == false )
-        breakpoint();
-    
-    if( memcmp(writeData2, &readData2[offset], dataLength2) ){
+    if( memcmp(writeDataBlock2, &readDataBlock2[offset], dataBlockLength2) ){
         breakpoint();
     }
     
-    
-    breakpoint();
-//    spi_flash_Erase_4KB_Sector(address_1);    
+    breakpoint();  
 }
 /* *****************************************************************************
  End of File

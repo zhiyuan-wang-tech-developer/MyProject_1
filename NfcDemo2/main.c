@@ -101,7 +101,7 @@ int main(void)
     CNCONAbits.ON = 0; 
 //    clearLogInfo();
 //    logf("Start SPI FLASH Debugging\r\n");
-    spi_flash_test();
+    spi_flash_Test();
 #endif
     
 #ifdef DEBUG_SYSTEM

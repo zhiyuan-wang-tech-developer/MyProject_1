@@ -169,7 +169,7 @@ void __ISR (_CHANGE_NOTICE_VECTOR, IPL5AUTO) _CHANGE_NOTICE ( void )
                 //Maybe do some special things before resuming with the rest of the wake-up procedure
                 //When PIC32MX MCU is selected by the main board, it should tell the main board: NOT BUSY
                 //So that the main board can send commands further...
-                KL_INT2_BUSY_N_SetHigh(); /* I am NOT BUSY */
+//                KL_INT2_BUSY_N_SetHigh(); /* I am NOT BUSY */
 //                breakpoint();
             }
             else

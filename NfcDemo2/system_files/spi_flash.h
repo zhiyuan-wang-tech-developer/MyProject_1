@@ -61,7 +61,7 @@ uint8_t spi_flash_Read_ID(uint8_t ID_address);
 uint32_t spi_flash_Read_Jedec_ID(void);
 uint8_t spi_flash_Read_Byte(uint32_t address);
 bool spi_flash_Read_Bytes(uint32_t address, uint32_t num_bytes_to_read, uint8_t *pOutputBuffer, uint32_t outputBufferSize);
-void spi_flash_unlock_block_protection(void);
+void spi_flash_Unlock_Block_Protection(void);
 void spi_flash_Write_Byte(uint32_t address, uint8_t byteToWrite);
 bool spi_flash_Write_Bytes(uint32_t address, uint32_t num_bytes_to_write, uint8_t *pInputBuffer, uint32_t inputBufferSize);
 void spi_flash_Erase_All(void);
